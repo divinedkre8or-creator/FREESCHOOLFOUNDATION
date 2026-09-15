@@ -382,29 +382,51 @@ function ApplyPage() {
               />
             )}
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-3 border-t border-border pt-5 sm:flex sm:items-center sm:justify-between sm:pt-6">
-            <span className="col-span-2 flex items-center justify-end gap-1 text-xs font-semibold text-brand-green-dark sm:order-2 sm:col-auto">
-              <Save className="h-3.5 w-3.5" /> Progress saved
-            </span>
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto"
-              disabled={step === 0}
-              onClick={() => {
-                setErrors([]);
-                setStep((value) => Math.max(0, value - 1));
-              }}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-            <div className="sm:order-3">
+          <div className="mt-8 border-t border-border pt-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <Button
-                className="w-full sm:w-auto"
+                variant="outline"
+                size="lg"
+                className="h-12 w-full justify-center px-6 font-semibold sm:w-auto"
+                disabled={step === 0 || submitting}
+                onClick={() => {
+                  setErrors([]);
+                  setStep((value) => Math.max(0, value - 1));
+                  if (typeof window !== "undefined") {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+
+              <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-brand-green-dark">
+                <Save className="h-3.5 w-3.5" /> Progress auto-saved
+              </div>
+
+              <Button
+                size="lg"
+                className={`h-12 w-full justify-center px-8 text-base font-bold sm:w-auto ${
+                  step === 5
+                    ? "bg-brand-green text-white shadow-md hover:bg-brand-green-dark"
+                    : "bg-primary text-primary-foreground"
+                }`}
                 onClick={() => void goNext()}
                 disabled={submitting}
               >
-                {submitting ? "Submitting…" : step === 5 ? "Submit application" : "Continue"}
-                <ArrowRight className="ml-2 h-4 w-4" />
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <LoaderCircle className="h-4 w-4 animate-spin" /> Submitting application…
+                  </span>
+                ) : step === 5 ? (
+                  <span className="flex items-center justify-center gap-2">
+                    Submit application <ArrowRight className="h-4 w-4" />
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Continue <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
               </Button>
             </div>
           </div>
@@ -983,10 +1005,16 @@ function ApplicationAccess() {
                     required
                   />
                 </Field>
-                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                <Button type="submit" size="lg" className="h-12 w-full text-base font-bold" disabled={loading}>
                   {loading ? "Creating account…" : "Create account and continue"}
                 </Button>
               </form>
+              <p className="mt-5 text-center text-sm text-muted-foreground">
+                Already started an application?{" "}
+                <Link to="/login" className="font-bold text-brand-green-dark hover:underline">
+                  Sign in to continue
+                </Link>
+              </p>
               <div className="mt-5 flex gap-3 rounded-lg bg-brand-green-soft p-4 text-sm text-brand-green-dark">
                 <ShieldCheck className="h-5 w-5 shrink-0" />
                 Your application is private and accessible only with your verified email and

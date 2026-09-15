@@ -123,11 +123,27 @@ export async function submitApplicationToSupabase(
     throw new Error("We could not save your application. Please try again.");
 
   if (input.document) {
-    const extension = input.document.name.split(".").pop()?.toLowerCase() ?? "file";
+    const mimeMap: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      pdf: "application/pdf",
+      webp: "image/webp",
+    };
+    const extension = input.document.name.split(".").pop()?.toLowerCase() ?? "pdf";
+    const rawMime = input.document.type?.toLowerCase().trim() || "";
+    const normalizedMime =
+      rawMime === "image/jpg" || rawMime === "image/pjpeg"
+        ? "image/jpeg"
+        : rawMime || mimeMap[extension] || "application/pdf";
+
     const storagePath = `${user.id}/${draft.id}/${crypto.randomUUID()}.${extension}`;
     const { error: uploadError } = await supabase.storage
       .from("application-documents")
-      .upload(storagePath, input.document, { upsert: false });
+      .upload(storagePath, input.document, {
+        contentType: normalizedMime,
+        upsert: false,
+      });
     if (uploadError) throw new Error("Your document could not be uploaded. Please try again.");
 
     const { data: documentId, error: documentError } = await supabase.rpc(
@@ -137,13 +153,17 @@ export async function submitApplicationToSupabase(
         target_document_type: input.level === "ND" ? "O'Level Result" : "ND Result",
         target_display_name: input.document.name,
         target_storage_path: storagePath,
-        target_mime_type: input.document.type,
+        target_mime_type: normalizedMime,
         target_size_bytes: input.document.size,
       },
     );
-    if (documentError || !documentId)
+    if (documentError || !documentId) {
+      console.error("Document registration error:", documentError);
       throw new Error("Your document record could not be saved. Please try again.");
-    await supabase.functions.invoke("scan-document", { body: { documentId } });
+    }
+    void supabase.functions
+      .invoke("scan-document", { body: { documentId } })
+      .catch(() => undefined);
   }
 
   const { data: submitted, error: submitError } = await supabase
