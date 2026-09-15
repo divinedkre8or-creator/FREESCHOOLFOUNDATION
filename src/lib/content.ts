@@ -1,11 +1,11 @@
 export const FAQS = [
   {
     q: "Is the scholarship really 100% free?",
-    a: "Yes. The Free School Foundation covers your tuition for the full ND or HND programme at Citi Polytechnic. You will never be asked to pay a fee to apply.",
+    a: "Yes. The Free School Foundation covers your tuition for the full ND or HND programme. You will never be asked to pay a fee to apply.",
   },
   {
     q: "Do I have to travel to Abuja to study?",
-    a: "No. The programme runs through Citi Polytechnic's Open Distance e-Learning Programme, so you study from Aba with support from the Foundation office.",
+    a: "No. The programme runs through Open Distance Learning (ODL), so you study from Aba with physical orientation and direct support from the Foundation office.",
   },
   {
     q: "Who can apply?",
@@ -17,7 +17,7 @@ export const FAQS = [
   },
   {
     q: "Can I apply while working?",
-    a: "Yes. The distance learning format is built for people who work. Many of our applicants study alongside a job or business.",
+    a: "Yes. The Open Distance Learning format is built for people who work. Many of our applicants study alongside a job or business.",
   },
   {
     q: "How long does the application take?",
@@ -52,7 +52,7 @@ export const STEPS_HOW_IT_WORKS = [
   },
   {
     title: "Enrolment",
-    body: "You are enrolled with Citi Polytechnic and begin studying through the ODeL programme from Aba.",
+    body: "You are enrolled and begin studying through the Open Distance Learning (ODL) programme from Aba.",
   },
 ];
 
@@ -61,7 +61,7 @@ export const ELIGIBILITY = {
     "Minimum of four O'Level credits including English or Mathematics, depending on programme",
     "WAEC, NECO or NABTEB result (awaiting result accepted with evidence)",
     "Valid means of contact — a phone number you use regularly",
-    "Willingness to study through the Open Distance e-Learning format",
+    "Willingness to study through the Open Distance Learning (ODL) format",
   ],
   HND: [
     "Completed National Diploma (ND) in a related programme",

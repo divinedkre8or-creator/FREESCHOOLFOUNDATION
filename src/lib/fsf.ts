@@ -317,7 +317,7 @@ function mk(
     createdAt: iso(days + 2),
     ...(status === "Draft" ? {} : { submittedAt: iso(days) }),
     status,
-    campaign: "Citi Polytechnic ODeL Scholarship 2026",
+    campaign: "Citi Polytechnic ODL Scholarship 2026",
     level,
     programme,
     personal: {
@@ -534,7 +534,7 @@ export const DEMO_ANNOUNCEMENTS: Announcement[] = INCLUDE_DEMO_DATA
       {
         id: "a1",
         title: "Application deadline extended",
-        body: "The deadline for the Citi Polytechnic ODeL scholarship has been extended to 30 November 2026. Encourage others to apply.",
+        body: "The deadline for the 2026 ODL scholarship has been extended to 30 November 2026. Encourage others to apply.",
         audience: "All applicants",
         createdAt: iso(3),
       },
@@ -552,10 +552,10 @@ export const DEMO_CAMPAIGNS: Campaign[] = INCLUDE_DEMO_DATA
   ? [
       {
         id: "c1",
-        name: "Citi Polytechnic ODeL Scholarship 2026",
+        name: "Citi Polytechnic ODL Scholarship 2026",
         partner: "Citi Polytechnic Abuja",
         description:
-          "100% funded ND and HND places through Citi Polytechnic's Open Distance e-Learning Programme, studied from Aba.",
+          "100% funded ND and HND places through the Open Distance Learning (ODL) Programme, studied from Aba.",
         programmes: [...PROGRAMMES],
         opensOn: "2026-08-01",
         deadline: "2026-11-30",

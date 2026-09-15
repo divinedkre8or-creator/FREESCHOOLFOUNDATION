@@ -135,8 +135,14 @@ function Footer() {
         </div>
       </div>
       <div className="border-t border-border/70">
-        <div className="container-page flex flex-col gap-2 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} The Free School Foundation. All rights reserved.</p>
+        <div className="container-page flex flex-col gap-3 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p>© {new Date().getFullYear()} The Free School Foundation. All rights reserved.</p>
+            <p className="mt-1 text-[11px] text-muted-foreground/80">
+              Academic Partner for National Diploma & Higher National Diploma awards: Citi
+              Polytechnic Abuja (ODL).
+            </p>
+          </div>
           <div className="flex flex-wrap gap-4">
             <Link to="/privacy" className="hover:text-foreground">
               Privacy

@@ -338,7 +338,7 @@ function ApplicantProfile() {
                     ? "National Diploma (ND)"
                     : "Higher National Diploma (HND)",
                 ],
-                ["Partner Institution", "Citi Polytechnic ODeL Partnership"],
+                ["Partner Institution", "Citi Polytechnic ODL Partnership"],
                 ["Scholarship Campaign", application.campaign],
                 ["Application Date", formatDate(application.submittedAt)],
                 [

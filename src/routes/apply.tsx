@@ -240,7 +240,7 @@ function ApplyPage() {
       createdAt: now,
       submittedAt: now,
       status: "Submitted",
-      campaign: "Citi Polytechnic ODeL Scholarship 2026",
+      campaign: "Citi Polytechnic ODL Scholarship 2026",
       level: form.level,
       programme: form.programme,
       personal: {
@@ -296,9 +296,13 @@ function ApplyPage() {
   if (!authUser) return <ApplicationAccess />;
 
   if (submitted) {
-    return <SubmissionSuccessView application={submitted} onAccessPortal={() => void navigate({ to: "/portal" })} />;
+    return (
+      <SubmissionSuccessView
+        application={submitted}
+        onAccessPortal={() => void navigate({ to: "/portal" })}
+      />
+    );
   }
-
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -988,7 +992,12 @@ function ApplicationAccess() {
                     required
                   />
                 </Field>
-                <Button type="submit" size="lg" className="h-12 w-full text-base font-bold" disabled={loading}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-12 w-full text-base font-bold"
+                  disabled={loading}
+                >
                   {loading ? "Creating account…" : "Create account and continue"}
                 </Button>
               </form>
@@ -1057,7 +1066,8 @@ function SubmissionSuccessView({
               Application Submitted Successfully
             </h1>
             <p className="mx-auto mt-2 max-w-md text-xs text-emerald-100 sm:text-sm">
-              Your scholarship submission has been officially registered in the Foundation admissions database.
+              Your scholarship submission has been officially registered in the Foundation
+              admissions database.
             </p>
           </div>
 
@@ -1092,7 +1102,8 @@ function SubmissionSuccessView({
                 </Button>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Keep this code safe. You will need it for all inquiries, status tracking, and verification.
+                Keep this code safe. You will need it for all inquiries, status tracking, and
+                verification.
               </p>
             </div>
 
@@ -1109,12 +1120,14 @@ function SubmissionSuccessView({
               <div className="flex items-center justify-between p-3.5 sm:px-4">
                 <span className="font-medium text-muted-foreground">Award / Level</span>
                 <span className="font-bold text-foreground">
-                  {application.level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"}
+                  {application.level === "ND"
+                    ? "National Diploma (ND)"
+                    : "Higher National Diploma (HND)"}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3.5 sm:px-4">
                 <span className="font-medium text-muted-foreground">Education Partner</span>
-                <span className="font-bold text-foreground">Citi Polytechnic ODeL Partnership</span>
+                <span className="font-bold text-foreground">Citi Polytechnic ODL Partnership</span>
               </div>
             </div>
 
@@ -1157,13 +1170,15 @@ function SubmissionSuccessView({
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
                   <span>
-                    <strong>Admissions Scrutiny:</strong> The scholarship committee will review your biodata, qualification, and motivation.
+                    <strong>Admissions Scrutiny:</strong> The scholarship committee will review your
+                    biodata, qualification, and motivation.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
                   <span>
-                    <strong>Live Updates:</strong> Check your <strong>Admission Portal</strong> anytime for shortlist notices, document requests, and enrolment announcements.
+                    <strong>Live Updates:</strong> Check your <strong>Admission Portal</strong>{" "}
+                    anytime for shortlist notices, document requests, and enrolment announcements.
                   </span>
                 </li>
               </ul>
@@ -1180,4 +1195,3 @@ function SubmissionSuccessView({
     </div>
   );
 }
-

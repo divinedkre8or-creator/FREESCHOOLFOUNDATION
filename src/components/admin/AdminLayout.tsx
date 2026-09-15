@@ -18,11 +18,7 @@ import {
 import { useState } from "react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useStore } from "@/lib/store";
 import { InstallAppLine } from "@/components/site/InstallAppLine";
@@ -51,7 +47,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     status: app.status,
     time: app.submittedAt || app.createdAt,
     appNumber: app.appNumber,
-    isUnread: !readNotifications[app.id] && (app.status === "Submitted" || app.status === "Under Review"),
+    isUnread:
+      !readNotifications[app.id] && (app.status === "Submitted" || app.status === "Under Review"),
   }));
 
   const unreadCount = notifications.filter((n) => n.isUnread).length;
@@ -139,9 +136,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </button>
           <div className="hidden lg:block">
             <p className="text-sm font-bold">Scholarship dashboard</p>
-            <p className="text-xs text-muted-foreground">Citi Polytechnic ODeL 2026</p>
+            <p className="text-xs text-muted-foreground">Open Distance Learning (ODL) 2026</p>
           </div>
-          
+
           {/* Functional Notifications Center */}
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
@@ -201,9 +198,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
-                          <p className="truncate text-xs font-bold text-foreground">
-                            {item.title}
-                          </p>
+                          <p className="truncate text-xs font-bold text-foreground">{item.title}</p>
                           <span className="shrink-0 text-[10px] text-muted-foreground">
                             {formatDateTime(item.time)}
                           </span>

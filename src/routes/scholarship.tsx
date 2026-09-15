@@ -12,7 +12,7 @@ export const Route = createFileRoute("/scholarship")({
     seoHead({
       title: "100% Funded ND & HND Scholarship | The Free School Foundation",
       description:
-        "Learn what the Citi Polytechnic ODeL scholarship covers, who can apply, the required documents, available ND and HND programmes, and how to apply online.",
+        "Learn what the Open Distance Learning (ODL) scholarship covers, who can apply, the required documents, available ND and HND programmes, and how to apply online.",
       path: "/scholarship",
       scripts: [
         {
@@ -34,8 +34,8 @@ function ScholarshipPage() {
     <SiteLayout>
       <PageHero
         eyebrow="Current scholarship"
-        title="Citi Polytechnic Open Distance e-Learning Scholarship"
-        description="A 100% full scholarship covering tuition for ND and HND programmes, funded by The Free School Foundation and delivered by Citi Polytechnic Abuja."
+        title="Open Distance Learning (ODL) Scholarship"
+        description="A 100% full scholarship covering tuition for ND and HND programmes, funded by The Free School Foundation with accredited partner Citi Polytechnic Abuja."
       />
 
       <section className="section-y">
@@ -46,8 +46,8 @@ function ScholarshipPage() {
               {[
                 "100% of tuition for the full ND or HND programme",
                 "No application fee at any stage",
-                "Access to Citi Polytechnic's Open Distance e-Learning platform",
-                "Support from the Foundation office in Aba throughout your studies",
+                "Access to Open Distance Learning (ODL) study materials and faculty support",
+                "Structured physical orientation and support from the Foundation office in Aba",
               ].map((item) => (
                 <li key={item} className="flex gap-3 text-muted-foreground">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-green" />
@@ -131,7 +131,7 @@ function ScholarshipPage() {
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Study mode</dt>
-                  <dd className="font-semibold">Open Distance e-Learning</dd>
+                  <dd className="font-semibold">Open Distance Learning (ODL)</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Application deadline</dt>

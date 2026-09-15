@@ -4,13 +4,13 @@ import {
   BadgeCheck,
   CheckCircle2,
   ClipboardList,
+  GraduationCap,
   MapPin,
   Phone,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { PartnerBar } from "@/components/site/PartnerBar";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")({
     seoHead({
       title: "100% Free ND & HND Scholarship | The Free School Foundation",
       description:
-        "Apply for a 100% funded ND or HND scholarship in Nigeria. Study through Citi Polytechnic's Open Distance e-Learning Programme with no tuition or application fee.",
+        "Apply for a 100% funded ND or HND scholarship in Nigeria. Study through the Open Distance Learning (ODL) Programme with no tuition or application fee.",
       path: "/",
     }),
   component: Home,
@@ -49,8 +49,8 @@ function Home() {
               <span className="mt-1 block text-brand-orange">100% free</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-              Study from Aba through Citi Polytechnic's Open Distance e-Learning Programme, fully
-              funded by The Free School Foundation. No tuition fees, no application fees.
+              Study from Aba through the Open Distance Learning (ODL) Programme, fully funded by The
+              Free School Foundation. No tuition fees, no application fees.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 text-base">
@@ -62,7 +62,6 @@ function Home() {
                 <Link to="/scholarship">Learn more</Link>
               </Button>
             </div>
-            <PartnerBar className="mt-8 max-w-lg" />
           </div>
           <div className="relative">
             <img
@@ -90,7 +89,8 @@ function Home() {
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             The Free School Foundation pays your tuition so that money is never the reason you stop
-            learning. You study online from home, at your own pace.
+            learning. Study with flexible pacing supported by physical orientation and Foundation
+            guidance in Aba.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -107,12 +107,12 @@ function Home() {
               {
                 icon: MapPin,
                 title: "Study from Aba",
-                body: "Distance e-learning means no relocation and no lecture-hall commute.",
+                body: "Open Distance Learning allows flexible study from Aba with dedicated local support.",
               },
               {
                 icon: ShieldCheck,
                 title: "Recognised diploma",
-                body: "Awarded by Citi Polytechnic through its Open Distance e-Learning Programme.",
+                body: "Accredited National Diploma & Higher National Diploma awards through approved programmes.",
               },
             ].map((item) => (
               <div key={item.title} className="rounded-2xl border border-border p-5 sm:p-6">
@@ -207,7 +207,7 @@ function Home() {
         </div>
       </section>
 
-      {/* About + partnership */}
+      {/* About */}
       <section className="section-y">
         <div className="container-page grid gap-10 lg:grid-cols-2">
           <div>
@@ -222,28 +222,34 @@ function Home() {
             </p>
             <p className="mt-4 leading-relaxed text-muted-foreground">
               We work directly with recognised institutions so that every place we fund leads to a
-              real, recognised qualification. Our first campaign is a partnership with Citi
-              Polytechnic Abuja for 100% funded ND and HND places through their Open Distance
-              e-Learning Programme.
+              real, accredited qualification. Our Open Distance Learning (ODL) scholarship covers
+              100% of tuition for eligible ND and HND candidates.
             </p>
             <Button asChild variant="outline" className="mt-6">
               <Link to="/about">Read more about us</Link>
             </Button>
           </div>
           <div className="rounded-2xl border border-border bg-secondary/40 p-5 sm:p-7">
-            <PartnerBar className="mb-6 bg-background" />
-            <h3 className="text-lg font-bold">The partnership</h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the academic
-              programme through its Open Distance e-Learning format, so students in Aba and beyond
-              can study without relocating.
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-green-soft text-brand-green-dark">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Academic Model</h3>
+                <p className="text-xs text-muted-foreground">Open Distance Learning (ODL)</p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              The Foundation funds the entire scholarship tuition. Academic delivery is conducted
+              through structured Open Distance Learning with physical orientation and local academic
+              support in Aba.
             </p>
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
               {[
                 ["Funder", "The Free School Foundation"],
-                ["Academic partner", "Citi Polytechnic Abuja"],
-                ["Study mode", "Open Distance e-Learning"],
+                ["Study mode", "Open Distance Learning (ODL)"],
                 ["Study location", "Aba, Abia State"],
+                ["Tuition coverage", "100% Fully Funded"],
               ].map(([k, v]) => (
                 <div key={k}>
                   <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -314,8 +320,8 @@ function Home() {
             Your diploma is fully funded. The only step left is yours.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Applications for the Citi Polytechnic ODeL scholarship are open now. It takes about 15
-            minutes.
+            Applications for the 2026 Open Distance Learning (ODL) scholarship are open now. It
+            takes about 15 minutes.
           </p>
           <Button asChild size="lg" variant="secondary" className="mt-8 h-12 text-base">
             <Link to="/apply">

@@ -96,9 +96,9 @@ function AboutPage() {
             Our partnership with Citi Polytechnic
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the academic
-            programme through its Open Distance e-Learning Programme, so students can study from Aba
-            without relocating.
+            The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the accredited
+            academic programme through its Open Distance Learning (ODL) Programme, so students can
+            study from Aba with structured local support.
           </p>
           <PartnerBar className="mt-8 max-w-2xl" />
         </div>
@@ -119,7 +119,7 @@ function AboutPage() {
           <div className="rounded-2xl border border-border bg-brand-green-soft/60 p-7">
             <h2 className="text-lg font-bold">Applications are open</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              The Citi Polytechnic ODeL scholarship is accepting applications now.
+              The 2026 Open Distance Learning (ODL) scholarship is accepting applications now.
             </p>
             <Button asChild className="mt-5">
               <Link to="/apply">Apply for scholarship</Link>

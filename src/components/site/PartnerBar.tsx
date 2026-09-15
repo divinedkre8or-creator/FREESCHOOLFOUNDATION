@@ -38,7 +38,7 @@ export function PartnerBar({ className }: { className?: string }) {
         />
         <div className="min-w-0 text-sm">
           <p className="font-bold">Citi Polytechnic Abuja</p>
-          <p className="text-muted-foreground">Open Distance e-Learning partner</p>
+          <p className="text-muted-foreground">Open Distance Learning (ODL) partner</p>
         </div>
       </div>
     </div>

@@ -340,7 +340,7 @@ function mapApplication(data: ApplicationRow): Application {
     createdAt: data.created_at,
     ...(data.submitted_at ? { submittedAt: data.submitted_at } : {}),
     status: STATUS_MAP[data.status] ?? "Submitted",
-    campaign: "Citi Polytechnic ODeL Scholarship 2026",
+    campaign: "Citi Polytechnic ODL Scholarship 2026",
     level: String(data.level).toUpperCase() as "ND" | "HND",
     programme: (programmeRelation?.name ?? "Computer Science") as Application["programme"],
     personal,
@@ -406,4 +406,3 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
   }
   return data.signedUrl;
 }
-

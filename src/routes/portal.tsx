@@ -468,7 +468,7 @@ function PortalPage() {
                       : "Higher National Diploma (HND)"
                   }
                 />
-                <Info label="Education Partner" value="Citi Polytechnic ODeL Partnership" />
+                <Info label="Education Partner" value="Citi Polytechnic ODL Partnership" />
                 <Info label="Scholarship Campaign" value={application.campaign} />
               </div>
             </div>
