@@ -4,12 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Award,
+  Building2,
   Check,
+  CheckCircle2,
+  Clock,
+  Copy,
   FileCheck2,
   LoaderCircle,
   Mail,
+  Printer,
   Save,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
@@ -289,33 +296,9 @@ function ApplyPage() {
   if (!authUser) return <ApplicationAccess />;
 
   if (submitted) {
-    return (
-      <div className="min-h-screen bg-brand-green-soft/50">
-        <div className="container-page flex min-h-screen items-center justify-center py-10">
-          <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-5 text-center shadow-lift sm:p-7 md:p-10">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-green-soft text-brand-green-dark">
-              <Check className="h-8 w-8" />
-            </div>
-            <h1 className="mt-6 text-3xl font-extrabold">Application submitted</h1>
-            <p className="mt-3 text-muted-foreground">
-              We have received your application. Keep this number whenever you contact the
-              Foundation.
-            </p>
-            <p className="mt-6 rounded-xl bg-brand-orange-soft px-4 py-4 text-xl font-extrabold tracking-wide text-brand-orange">
-              {submitted.appNumber}
-            </p>
-            <Button
-              className="mt-7 w-full"
-              size="lg"
-              onClick={() => void navigate({ to: "/portal" })}
-            >
-              View my application <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <SubmissionSuccessView application={submitted} onAccessPortal={() => void navigate({ to: "/portal" })} />;
   }
+
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -1027,3 +1010,174 @@ function ApplicationAccess() {
     </div>
   );
 }
+
+function SubmissionSuccessView({
+  application,
+  onAccessPortal,
+}: {
+  application: Application;
+  onAccessPortal: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(application.appNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const applicantName = `${application.personal.firstName} ${application.personal.lastName}`.trim();
+
+  return (
+    <div className="min-h-screen bg-brand-green-soft/40 py-8 sm:py-12">
+      <div className="container-page max-w-2xl">
+        {/* Top brand header */}
+        <div className="mb-6 flex items-center justify-between">
+          <Logo />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-green-soft px-3 py-1 text-xs font-bold text-brand-green-dark">
+            <Sparkles className="h-3.5 w-3.5 text-brand-orange" /> Official Reference
+          </span>
+        </div>
+
+        {/* Main Reference Card */}
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lift">
+          {/* Green Top Ribbon */}
+          <div className="bg-gradient-to-r from-brand-green-dark via-brand-green to-brand-green-dark p-6 text-center text-white sm:p-8">
+            <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-white/10 ring-4 ring-white/20 backdrop-blur-sm">
+              <Award className="h-7 w-7 text-white" />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-200">
+              The Free School Foundation • Scholarship & Admission
+            </p>
+            <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">
+              Application Submitted Successfully
+            </h1>
+            <p className="mx-auto mt-2 max-w-md text-xs text-emerald-100 sm:text-sm">
+              Your scholarship submission has been officially registered in the Foundation admissions database.
+            </p>
+          </div>
+
+          <div className="p-5 sm:p-8">
+            {/* Application Code Box */}
+            <div className="rounded-xl border-2 border-dashed border-brand-orange/40 bg-brand-orange-soft/40 p-4 text-center sm:p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
+                Your Official Application Number
+              </p>
+              <div className="mt-2 flex items-center justify-center gap-3">
+                <span className="font-mono text-2xl font-extrabold tracking-wider text-foreground sm:text-3xl">
+                  {application.appNumber}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void copyCode()}
+                  className="h-9 gap-1.5 border-brand-orange/40 bg-card font-semibold text-brand-orange hover:bg-brand-orange hover:text-white"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 text-brand-green" />
+                      <span className="text-xs">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span className="text-xs">Copy Code</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Keep this code safe. You will need it for all inquiries, status tracking, and verification.
+              </p>
+            </div>
+
+            {/* Applicant Dossier Snapshot */}
+            <div className="mt-6 divide-y divide-border rounded-xl border border-border bg-secondary/20 text-xs sm:text-sm">
+              <div className="flex items-center justify-between p-3.5 sm:px-4">
+                <span className="font-medium text-muted-foreground">Applicant Name</span>
+                <span className="font-bold text-foreground">{applicantName}</span>
+              </div>
+              <div className="flex items-center justify-between p-3.5 sm:px-4">
+                <span className="font-medium text-muted-foreground">Programme Applied</span>
+                <span className="font-bold text-foreground">{application.programme}</span>
+              </div>
+              <div className="flex items-center justify-between p-3.5 sm:px-4">
+                <span className="font-medium text-muted-foreground">Award / Level</span>
+                <span className="font-bold text-foreground">
+                  {application.level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3.5 sm:px-4">
+                <span className="font-medium text-muted-foreground">Education Partner</span>
+                <span className="font-bold text-foreground">Citi Polytechnic ODeL Partnership</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                size="lg"
+                onClick={onAccessPortal}
+                className="h-13 flex-1 bg-brand-green text-base font-bold text-white shadow-md hover:bg-brand-green-dark"
+              >
+                Access Your Admission Portal <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  if (typeof window !== "undefined") window.print();
+                }}
+                className="h-13 gap-2 px-5 font-semibold text-muted-foreground hover:text-foreground"
+              >
+                <Printer className="h-4 w-4" /> Print Reference
+              </Button>
+            </div>
+
+            {/* What to Expect Next */}
+            <div className="mt-8 rounded-xl border border-border p-4 sm:p-5">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+                <Clock className="h-4 w-4 text-brand-orange" /> Next Steps & Review Process
+              </h2>
+              <ul className="mt-3 space-y-2.5 text-xs text-muted-foreground sm:text-sm">
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                  <span>
+                    <strong>Email Confirmation:</strong> A detailed receipt has been sent to{" "}
+                    <strong className="text-foreground">{application.personal.email}</strong>.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                  <span>
+                    <strong>Admissions Scrutiny:</strong> The scholarship committee will review your biodata, qualification, and motivation.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                  <span>
+                    <strong>Live Updates:</strong> Check your <strong>Admission Portal</strong> anytime for shortlist notices, document requests, and enrolment announcements.
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Security Notice */}
+            <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-brand-green-dark" />
+              <span>Verified & Protected • The Free School Foundation Official Gateway</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

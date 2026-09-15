@@ -352,6 +352,7 @@ function mapApplication(data: ApplicationRow): Application {
       type: String(document["document_type"] ?? "Supporting document"),
       uploadedAt: String(document["uploaded_at"] ?? ""),
       uploaded: Boolean(document["storage_path"]),
+      storagePath: document["storage_path"] ? String(document["storage_path"]) : undefined,
       requested: Boolean(document["requested_at"]),
       ...(document["scan_status"]
         ? {
@@ -391,3 +392,18 @@ function mapApplication(data: ApplicationRow): Application {
     consentCommunication: Boolean(data.communication_consent),
   };
 }
+
+export async function getDocumentUrl(storagePath: string): Promise<string> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.storage
+    .from("application-documents")
+    .createSignedUrl(storagePath, 3600);
+  if (error || !data?.signedUrl) {
+    const { data: publicData } = supabase.storage
+      .from("application-documents")
+      .getPublicUrl(storagePath);
+    return publicData.publicUrl;
+  }
+  return data.signedUrl;
+}
+

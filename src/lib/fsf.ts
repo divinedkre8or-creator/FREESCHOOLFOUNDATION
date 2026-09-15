@@ -160,10 +160,12 @@ export type Doc = {
   name: string;
   type: string;
   uploadedAt: string;
-  size?: string;
-  requested?: boolean;
+  size?: string | undefined;
+  requested?: boolean | undefined;
   uploaded: boolean;
-  scanStatus?: "pending" | "clean" | "rejected" | "failed";
+  storagePath?: string | undefined;
+  fileUrl?: string | undefined;
+  scanStatus?: ("pending" | "clean" | "rejected" | "failed") | undefined;
 };
 
 export type Message = {
