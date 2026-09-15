@@ -11,10 +11,23 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdminAccessRouteImport } from './routes/admin-access'
+import { Route as ApplyRouteImport } from './routes/apply'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqsRouteImport } from './routes/faqs'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PortalRouteImport } from './routes/portal'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProgrammesRouteImport } from './routes/programmes'
 import { Route as ScholarshipRouteImport } from './routes/scholarship'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminApplicantsRouteImport } from './routes/admin.applicants'
+import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
+import { Route as AdminCommunicationsRouteImport } from './routes/admin.communications'
+import { Route as AdminStaffRouteImport } from './routes/admin.staff'
+import { Route as AdminApplicantsApplicationIdRouteImport } from './routes/admin.applicants.$applicationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -24,6 +37,21 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAccessRoute = AdminAccessRouteImport.update({
+  id: '/admin-access',
+  path: '/admin-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplyRoute = ApplyRouteImport.update({
+  id: '/apply',
+  path: '/apply',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -36,6 +64,21 @@ const FaqsRoute = FaqsRouteImport.update({
   path: '/faqs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProgrammesRoute = ProgrammesRouteImport.update({
   id: '/programmes',
   path: '/programmes',
@@ -46,55 +89,185 @@ const ScholarshipRoute = ScholarshipRouteImport.update({
   path: '/scholarship',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminApplicantsRoute = AdminApplicantsRouteImport.update({
+  id: '/applicants',
+  path: '/applicants',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCommunicationsRoute = AdminCommunicationsRouteImport.update({
+  id: '/communications',
+  path: '/communications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStaffRoute = AdminStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminApplicantsApplicationIdRoute =
+  AdminApplicantsApplicationIdRouteImport.update({
+    id: '/$applicationId',
+    path: '/$applicationId',
+    getParentRoute: () => AdminApplicantsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin-access': typeof AdminAccessRoute
+  '/apply': typeof ApplyRoute
   '/contact': typeof ContactRoute
   '/faqs': typeof FaqsRoute
+  '/login': typeof LoginRoute
+  '/portal': typeof PortalRoute
+  '/privacy': typeof PrivacyRoute
   '/programmes': typeof ProgrammesRoute
   '/scholarship': typeof ScholarshipRoute
+  '/terms': typeof TermsRoute
+  '/admin/applicants': typeof AdminApplicantsRouteWithChildren
+  '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/communications': typeof AdminCommunicationsRoute
+  '/admin/staff': typeof AdminStaffRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/applicants/$applicationId': typeof AdminApplicantsApplicationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin-access': typeof AdminAccessRoute
+  '/apply': typeof ApplyRoute
   '/contact': typeof ContactRoute
   '/faqs': typeof FaqsRoute
+  '/login': typeof LoginRoute
+  '/portal': typeof PortalRoute
+  '/privacy': typeof PrivacyRoute
   '/programmes': typeof ProgrammesRoute
   '/scholarship': typeof ScholarshipRoute
+  '/terms': typeof TermsRoute
+  '/admin/applicants': typeof AdminApplicantsRouteWithChildren
+  '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/communications': typeof AdminCommunicationsRoute
+  '/admin/staff': typeof AdminStaffRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/applicants/$applicationId': typeof AdminApplicantsApplicationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin-access': typeof AdminAccessRoute
+  '/apply': typeof ApplyRoute
   '/contact': typeof ContactRoute
   '/faqs': typeof FaqsRoute
+  '/login': typeof LoginRoute
+  '/portal': typeof PortalRoute
+  '/privacy': typeof PrivacyRoute
   '/programmes': typeof ProgrammesRoute
   '/scholarship': typeof ScholarshipRoute
+  '/terms': typeof TermsRoute
+  '/admin/applicants': typeof AdminApplicantsRouteWithChildren
+  '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/communications': typeof AdminCommunicationsRoute
+  '/admin/staff': typeof AdminStaffRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/applicants/$applicationId': typeof AdminApplicantsApplicationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/about' | '/contact' | '/faqs' | '/programmes' | '/scholarship'
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/admin-access'
+    | '/apply'
+    | '/contact'
+    | '/faqs'
+    | '/login'
+    | '/portal'
+    | '/privacy'
+    | '/programmes'
+    | '/scholarship'
+    | '/terms'
+    | '/admin/applicants'
+    | '/admin/campaigns'
+    | '/admin/communications'
+    | '/admin/staff'
+    | '/admin/'
+    | '/admin/applicants/$applicationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/contact' | '/faqs' | '/programmes' | '/scholarship'
+  to:
+    | '/'
+    | '/about'
+    | '/admin-access'
+    | '/apply'
+    | '/contact'
+    | '/faqs'
+    | '/login'
+    | '/portal'
+    | '/privacy'
+    | '/programmes'
+    | '/scholarship'
+    | '/terms'
+    | '/admin/applicants'
+    | '/admin/campaigns'
+    | '/admin/communications'
+    | '/admin/staff'
+    | '/admin'
+    | '/admin/applicants/$applicationId'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
+    | '/admin-access'
+    | '/apply'
     | '/contact'
     | '/faqs'
+    | '/login'
+    | '/portal'
+    | '/privacy'
     | '/programmes'
     | '/scholarship'
+    | '/terms'
+    | '/admin/applicants'
+    | '/admin/campaigns'
+    | '/admin/communications'
+    | '/admin/staff'
+    | '/admin/'
+    | '/admin/applicants/$applicationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  AdminAccessRoute: typeof AdminAccessRoute
+  ApplyRoute: typeof ApplyRoute
   ContactRoute: typeof ContactRoute
   FaqsRoute: typeof FaqsRoute
+  LoginRoute: typeof LoginRoute
+  PortalRoute: typeof PortalRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProgrammesRoute: typeof ProgrammesRoute
   ScholarshipRoute: typeof ScholarshipRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -113,6 +286,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-access': {
+      id: '/admin-access'
+      path: '/admin-access'
+      fullPath: '/admin-access'
+      preLoaderRoute: typeof AdminAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apply': {
+      id: '/apply'
+      path: '/apply'
+      fullPath: '/apply'
+      preLoaderRoute: typeof ApplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -125,6 +319,27 @@ declare module '@tanstack/react-router' {
       path: '/faqs'
       fullPath: '/faqs'
       preLoaderRoute: typeof FaqsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/programmes': {
@@ -141,16 +356,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScholarshipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/applicants': {
+      id: '/admin/applicants'
+      path: '/applicants'
+      fullPath: '/admin/applicants'
+      preLoaderRoute: typeof AdminApplicantsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/campaigns': {
+      id: '/admin/campaigns'
+      path: '/campaigns'
+      fullPath: '/admin/campaigns'
+      preLoaderRoute: typeof AdminCampaignsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/communications': {
+      id: '/admin/communications'
+      path: '/communications'
+      fullPath: '/admin/communications'
+      preLoaderRoute: typeof AdminCommunicationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/staff': {
+      id: '/admin/staff'
+      path: '/staff'
+      fullPath: '/admin/staff'
+      preLoaderRoute: typeof AdminStaffRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/applicants/$applicationId': {
+      id: '/admin/applicants/$applicationId'
+      path: '/$applicationId'
+      fullPath: '/admin/applicants/$applicationId'
+      preLoaderRoute: typeof AdminApplicantsApplicationIdRouteImport
+      parentRoute: typeof AdminApplicantsRoute
+    }
   }
 }
+
+interface AdminApplicantsRouteChildren {
+  AdminApplicantsApplicationIdRoute: typeof AdminApplicantsApplicationIdRoute
+}
+
+const AdminApplicantsRouteChildren: AdminApplicantsRouteChildren = {
+  AdminApplicantsApplicationIdRoute: AdminApplicantsApplicationIdRoute,
+}
+
+const AdminApplicantsRouteWithChildren = AdminApplicantsRoute._addFileChildren(
+  AdminApplicantsRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminApplicantsRoute: typeof AdminApplicantsRouteWithChildren
+  AdminCampaignsRoute: typeof AdminCampaignsRoute
+  AdminCommunicationsRoute: typeof AdminCommunicationsRoute
+  AdminStaffRoute: typeof AdminStaffRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminApplicantsRoute: AdminApplicantsRouteWithChildren,
+  AdminCampaignsRoute: AdminCampaignsRoute,
+  AdminCommunicationsRoute: AdminCommunicationsRoute,
+  AdminStaffRoute: AdminStaffRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRouteWithChildren,
+  AdminAccessRoute: AdminAccessRoute,
+  ApplyRoute: ApplyRoute,
   ContactRoute: ContactRoute,
   FaqsRoute: FaqsRoute,
+  LoginRoute: LoginRoute,
+  PortalRoute: PortalRoute,
+  PrivacyRoute: PrivacyRoute,
   ProgrammesRoute: ProgrammesRoute,
   ScholarshipRoute: ScholarshipRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

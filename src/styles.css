@@ -144,6 +144,16 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-width: 320px;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
   }
 
   h1,
@@ -160,11 +170,14 @@
   width: 100%;
   margin-inline: auto;
   max-width: 76rem;
-  padding-inline: 1.25rem;
+  padding-inline: 1rem;
+  @media (min-width: 640px) {
+    padding-inline: 1.25rem;
+  }
 }
 
 @utility section-y {
-  padding-block: 4rem;
+  padding-block: 3.5rem;
   @media (min-width: 768px) {
     padding-block: 6rem;
   }

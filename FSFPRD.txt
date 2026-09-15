@@ -1,0 +1,538 @@
+# Product Requirements Document
+
+## The Free School Foundation Scholarship Portal
+
+**Product:** Free School Foundation Scholarship Portal
+**Organization:** The Free School Foundation
+**Product Type:** Scholarship Website, Application Portal & Administration System
+**Primary Audience:** Scholarship applicants and Free School Foundation administrators
+**Status:** Initial Release
+
+---
+
+## 1. Product Overview
+
+The **Free School Foundation Scholarship Portal** is a digital platform for discovering, applying for, processing, and managing scholarship opportunities offered by The Free School Foundation.
+
+The platform will provide one central place where prospective students can learn about available scholarships, submit applications, track their application progress, provide requested information, and receive official updates from the Foundation.
+
+For The Free School Foundation, the platform will provide a central administrative system for receiving applications, reviewing candidates, managing scholarship decisions, communicating with applicants, requesting documents, and monitoring the overall scholarship programme.
+
+The current ND and HND scholarship programme will be the first scholarship hosted on the platform.
+
+The system should, however, be designed around **The Free School Foundation**, allowing additional scholarship programmes and educational partnerships to be introduced in the future.
+
+---
+
+# 2. Product Vision
+
+The goal is to create a simple digital bridge between **educational opportunities and the people who need them**.
+
+Instead of scholarship applications being scattered across WhatsApp conversations, physical forms, spreadsheets, emails, and phone calls, the Foundation should have one organized system covering the complete journey:
+
+**Discover → Apply → Review → Communicate → Approve → Enrol**
+
+For applicants, the experience should feel simple and transparent.
+
+For administrators, it should provide control and visibility over the entire scholarship process.
+
+---
+
+# 3. Product Objectives
+
+The platform should help The Free School Foundation:
+
+* Promote scholarship opportunities online.
+* Convert interested visitors into applicants.
+* Receive structured scholarship applications.
+* Reduce dependence on manual application processing.
+* Maintain organized records of applicants.
+* Review and shortlist applicants efficiently.
+* Communicate directly with applicants.
+* Request and receive additional documents.
+* Allow applicants to track their application status.
+* Manage multiple scholarship programmes over time.
+* Understand application performance through a central dashboard.
+
+---
+
+# 4. Primary Users
+
+### Prospective Applicants
+
+People who discover a Free School Foundation scholarship and want to understand the opportunity before applying.
+
+They primarily interact with the public website.
+
+### Applicants
+
+People who have started or submitted an application.
+
+They use the applicant portal to complete applications, track progress, upload requested documents, and receive information from the Foundation.
+
+### Foundation Administrators
+
+Authorized Free School Foundation staff responsible for reviewing applications, communicating with applicants, updating application statuses and managing scholarship programmes.
+
+### Super Administrator
+
+The highest administrative role.
+
+This person manages the overall platform, scholarship campaigns, administrative users and access permissions.
+
+---
+
+# 5. Current Scholarship Offering
+
+The first programme available through the platform is a **100% scholarship opportunity for ND and HND education**.
+
+The available programmes are:
+
+1. Mass Communication
+2. Business Administration and Management
+3. Computer Science
+4. Electrical Engineering
+5. Computer Engineering
+
+The scholarship is presented as:
+
+**100% Full Scholarship**
+**No Tuition Fees**
+
+Where necessary, the educational institution providing the programme can be identified as the Foundation's education partner, but it should **not dominate the website or product identity**.
+
+The Free School Foundation remains the primary brand throughout the platform.
+
+---
+
+# 6. Public Website
+
+The public website serves primarily as the scholarship's **information and conversion platform**.
+
+A visitor should understand within a few seconds:
+
+**What is being offered?**
+
+**Who is offering it?**
+
+**Who can apply?**
+
+**What can I study?**
+
+**How do I apply?**
+
+The main call to action throughout the website should be:
+
+### Apply for Scholarship
+
+The website should include the homepage, scholarship information, programmes, eligibility information, application process, about the Foundation, frequently asked questions, contact information, applicant login and application page.
+
+---
+
+# 7. Homepage
+
+The homepage should immediately introduce the scholarship opportunity.
+
+A suitable primary message is:
+
+## GET YOUR ND OR HND
+
+## 100% FREE
+
+Supporting message:
+
+**A fully funded education opportunity from The Free School Foundation for people ready to advance their education and career.**
+
+Primary action:
+
+**Apply for Scholarship**
+
+The remainder of the homepage should naturally explain the opportunity.
+
+Recommended content flow:
+
+**Scholarship Opportunity → Available Programmes → Who Can Apply → How It Works → How to Apply → About The Free School Foundation → Frequently Asked Questions → Contact/Office → Apply**
+
+The page should remain concise and conversion-focused rather than becoming a long institutional website.
+
+---
+
+# 8. Scholarship Application
+
+Applying should be straightforward, especially for people completing the process from mobile phones.
+
+The application should therefore be divided into manageable stages instead of presenting applicants with one very long form.
+
+### Stage 1: Personal Information
+
+Collect essential applicant information such as:
+
+Full name, phone number, email address, date of birth, residential information, state of residence, state of origin and passport photograph.
+
+Only information genuinely required for processing the scholarship should be collected.
+
+### Stage 2: Programme Selection
+
+The applicant selects:
+
+**ND or HND**
+
+Then chooses their desired programme.
+
+The application should adapt to the selected qualification so applicants only answer questions relevant to them.
+
+### Stage 3: Educational Background
+
+Applicants provide their previous educational information and qualifications.
+
+ND applicants provide the relevant secondary education information.
+
+HND applicants provide their ND qualification and related educational history.
+
+### Stage 4: Scholarship Information
+
+The Foundation can ask a small number of questions to better understand the applicant.
+
+This may include employment status and:
+
+**Why are you applying for this scholarship?**
+
+**How will this scholarship help you achieve your educational or career goals?**
+
+These should be short responses rather than lengthy essays.
+
+### Stage 5: Supporting Documents
+
+Applicants should be able to provide the initial documents required for their application.
+
+The Foundation should avoid demanding every possible document during the initial application.
+
+Additional documents can be requested later from shortlisted applicants.
+
+### Stage 6: Review & Submit
+
+Before submission, applicants should see a summary of their application and have the opportunity to correct mistakes.
+
+Applicants must confirm that the information they have provided is accurate.
+
+---
+
+# 9. Applicant Declaration
+
+Before submission, applicants should accept a declaration similar to:
+
+> I confirm that the information provided in this application is accurate and complete. I understand that submitting an application does not automatically guarantee scholarship approval or admission. My application may be reviewed and verified, and I may be required to provide additional information or supporting documents.
+
+Applicants should separately consent to receiving application-related communication from The Free School Foundation.
+
+---
+
+# 10. Application Number
+
+Every submitted application should receive a unique application number.
+
+Example:
+
+**FSF-2026-001284**
+
+The number becomes the applicant's primary reference when communicating with the Foundation about their application.
+
+---
+
+# 11. Applicant Portal
+
+Every applicant should have a simple personal portal.
+
+The portal should answer four important questions immediately:
+
+**What did I apply for?**
+
+**What is my current status?**
+
+**Is anything required from me?**
+
+**Has the Foundation sent me an update?**
+
+The dashboard should therefore show the applicant's name, application number, programme, qualification level, application status, next action and recent messages.
+
+Applicants should also be able to review their submitted information, upload requested documents, view announcements and see important updates.
+
+---
+
+# 12. Application Status
+
+The scholarship process should have clear stages.
+
+Recommended statuses include:
+
+**Draft → Submitted → Under Review → Shortlisted → Additional Information Required → Approved → Enrolled**
+
+Where necessary:
+
+**Not Successful**
+
+Applicants should receive understandable explanations rather than only seeing status labels.
+
+For example:
+
+**Under Review**
+
+“Your application has been received and is currently being reviewed by The Free School Foundation.”
+
+---
+
+# 13. Applicant Messages
+
+The applicant portal should include a dedicated message or notification area.
+
+The Foundation should be able to send:
+
+General announcements, application updates, document requests, shortlisting information, verification instructions, deadlines and enrolment information.
+
+Important communication should remain available inside the applicant's portal so applicants can return to it later.
+
+---
+
+# 14. Admin Dashboard
+
+The administrative side is the operational centre of the platform.
+
+After signing in, administrators should immediately see the overall state of the scholarship programme.
+
+The dashboard should answer questions such as:
+
+**How many people have applied?**
+
+**How many applications need attention?**
+
+**How many have been shortlisted?**
+
+**Which programmes are receiving the most applications?**
+
+**How many applicants have been approved?**
+
+Useful overview figures include total applications, submitted applications, applications under review, shortlisted applicants, additional-document requests, approved applicants and enrolled students.
+
+---
+
+# 15. Applicant Management
+
+Administrators need a central area containing all applicants.
+
+They should be able to search and filter applications according to relevant information such as:
+
+Programme, ND/HND, application status and application date.
+
+Selecting an applicant should open their complete application profile.
+
+---
+
+# 16. Applicant Administrative Profile
+
+Each applicant should have one organized profile containing:
+
+**Personal Information**
+
+**Programme & Qualification**
+
+**Educational Background**
+
+**Scholarship Responses**
+
+**Documents**
+
+**Application Status**
+
+**Internal Notes**
+
+**Messages**
+
+**Application History**
+
+The goal is for an administrator to understand the applicant's complete journey without searching through multiple unrelated sections.
+
+---
+
+# 17. Application Review
+
+Administrators should be able to review an application and make appropriate decisions.
+
+They should be able to:
+
+Review submitted information, inspect supporting documents, add private notes, request additional information, update application status, shortlist applicants, approve applicants or mark an application unsuccessful.
+
+Every major status change should remain part of the applicant's application history.
+
+---
+
+# 18. Internal Notes
+
+Foundation staff should be able to leave administrative notes on an applicant.
+
+For example:
+
+**“Academic documents reviewed. Awaiting final verification.”**
+
+These notes are strictly internal and must never appear in the applicant portal.
+
+---
+
+# 19. Communication Centre
+
+Administrators should have a central communication area.
+
+Messages should be sendable to:
+
+Individual applicants, selected applicants, applicants within a particular programme, ND applicants, HND applicants, shortlisted applicants, approved applicants or another relevant application group.
+
+The initial communication channels should focus on:
+
+**Portal Messages**
+
+**SMS**
+
+Email communication can be introduced when required.
+
+For bulk communication, administrators should clearly see **who will receive the message before sending it**.
+
+---
+
+# 20. Announcements
+
+The Foundation should be able to publish announcements to applicant portals.
+
+Examples include:
+
+**Application Deadline Extended**
+
+**Verification Exercise Begins Monday**
+
+**Shortlisted Applicants Should Upload Required Documents**
+
+**Orientation Information**
+
+Announcements can target everyone or particular applicant groups where appropriate.
+
+---
+
+# 21. Scholarship Campaign Management
+
+The platform should not permanently depend on one scholarship.
+
+The current ND/HND programme is simply the first campaign.
+
+The Free School Foundation should eventually be able to create additional opportunities such as:
+
+**University Scholarships**
+
+**Professional Certification Scholarships**
+
+**Digital Skills Scholarships**
+
+**Vocational Training Scholarships**
+
+**Partner Institution Scholarships**
+
+Each scholarship campaign can have its own title, description, programmes, eligibility requirements, application questions, documents, opening date, deadline and applicants.
+
+This makes the platform a long-term digital asset for the Foundation.
+
+---
+
+# 22. Administration & Staff Access
+
+Not every Foundation staff member needs complete control over the platform.
+
+The system should support different levels of administrative responsibility.
+
+A Super Administrator should be able to control administrative access.
+
+Other staff may receive permission to perform responsibilities such as reviewing applications, managing applicants or sending communications.
+
+Sensitive administrative actions should remain restricted to authorized people.
+
+---
+
+# 23. Mobile Experience
+
+Mobile usability is a major product requirement.
+
+A significant number of applicants are expected to apply using smartphones.
+
+The entire journey should therefore work comfortably on mobile:
+
+**Discover Scholarship → Apply → Upload Documents → Submit → Login → Track Application → Receive Updates**
+
+Forms should be easy to complete.
+
+Information should remain readable.
+
+Actions should be obvious.
+
+Applicants should never need a laptop simply to complete the scholarship application.
+
+---
+
+# 24. Trust, Privacy & Applicant Data
+
+The Foundation will be collecting personal and educational information.
+
+The platform should therefore collect only information genuinely required for scholarship administration.
+
+Applicants should only have access to their own information.
+
+Documents should remain private.
+
+Internal administrative notes must remain invisible to applicants.
+
+Applicants should understand why their information is being collected and how it relates to processing their scholarship application.
+
+---
+
+# 25. Brand Direction
+
+This is fundamentally a **Free School Foundation product**.
+
+The Free School Foundation logo, colours and identity should dominate the experience.
+
+Primary brand colours should be derived from the existing Foundation identity:
+
+**Green, Orange, Yellow and White.**
+
+Partner institutions should receive appropriate acknowledgement where relevant to a particular scholarship, but they should not visually compete with the Foundation's identity.
+
+The interface should feel:
+
+**Educational. Hopeful. Credible. Modern. Human.**
+
+It should not resemble a banking dashboard, complicated university ERP or generic technology/SaaS website.
+
+---
+
+# 26. Success Criteria
+
+The first version can be considered successful when a person can discover the scholarship, understand the opportunity, create an application, complete the required information, submit it and receive an application number.
+
+They should then be able to access their portal and follow their application.
+
+At the same time, Foundation administrators should be able to receive the application, review it, communicate with the applicant, request information, change its status, shortlist or approve the applicant and maintain an organized record of the process.
+
+The complete journey should work as:
+
+**Discover → Apply → Submit → Review → Communicate → Shortlist → Approve → Enrol**
+
+---
+
+## 27. Product Principle
+
+The public website should **sell the opportunity**.
+
+The application should **make applying easy**.
+
+The applicant portal should **provide clarity**.
+
+The admin panel should **give the Foundation control**.
+
+And the overall platform should establish **The Free School Foundation** as the central organization providing and managing the opportunity.
+
+**Citi Polytechnic is an educational partner for the current scholarship campaign, not the identity of the platform.**

@@ -91,8 +91,8 @@ function ScholarshipPage() {
 
             <h2 className="mt-12 text-2xl font-extrabold">Documents to prepare</h2>
             <p className="mt-3 text-muted-foreground">
-              You only need a few things to apply. Extra documents are requested later,
-              and only if you are shortlisted.
+              You only need a few things to apply. Extra documents are requested later, and only if
+              you are shortlisted.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {[

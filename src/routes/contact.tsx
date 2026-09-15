@@ -68,10 +68,7 @@ function ContactPage() {
                 body: "Monday to Friday, 9:00am – 4:00pm",
               },
             ].map((item) => (
-              <div
-                key={item.title}
-                className="flex gap-4 rounded-2xl border border-border p-6"
-              >
+              <div key={item.title} className="flex gap-4 rounded-2xl border border-border p-6">
                 <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-green" />
                 <div className="min-w-0">
                   <h2 className="font-bold">{item.title}</h2>
@@ -109,11 +106,7 @@ function ContactPage() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   Thank you for reaching out. Our team will get back to you shortly.
                 </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setSent(false)}
-                >
+                <Button variant="outline" className="mt-4" onClick={() => setSent(false)}>
                   Send another message
                 </Button>
               </div>

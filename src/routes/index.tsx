@@ -57,14 +57,13 @@ function Home() {
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-orange/30 bg-brand-orange-soft px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-orange">
               <BadgeCheck className="h-4 w-4" /> Applications open
             </span>
-            <h1 className="mt-5 text-4xl leading-[1.05] font-extrabold md:text-6xl">
+            <h1 className="mt-5 text-3xl leading-[1.05] font-extrabold min-[380px]:text-4xl md:text-6xl">
               Get your ND or HND
               <span className="mt-1 block text-brand-orange">100% free</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-              Study from Aba through Citi Polytechnic's Open Distance e-Learning
-              Programme, fully funded by The Free School Foundation. No tuition fees, no
-              application fees.
+              Study from Aba through Citi Polytechnic's Open Distance e-Learning Programme, fully
+              funded by The Free School Foundation. No tuition fees, no application fees.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 text-base">
@@ -103,8 +102,8 @@ function Home() {
             A fully funded route back to education
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            The Free School Foundation pays your tuition so that money is never the
-            reason you stop learning. You study online from home, at your own pace.
+            The Free School Foundation pays your tuition so that money is never the reason you stop
+            learning. You study online from home, at your own pace.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -129,12 +128,10 @@ function Home() {
                 body: "Awarded by Citi Polytechnic through its Open Distance e-Learning Programme.",
               },
             ].map((item) => (
-              <div key={item.title} className="rounded-2xl border border-border p-6">
+              <div key={item.title} className="rounded-2xl border border-border p-5 sm:p-6">
                 <item.icon className="h-6 w-6 text-brand-green" />
                 <h3 className="mt-4 text-base font-bold">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {item.body}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
               </div>
             ))}
           </div>
@@ -182,13 +179,9 @@ function Home() {
           <ol className="mt-10 grid gap-6 md:grid-cols-5">
             {STEPS_HOW_IT_WORKS.map((step, i) => (
               <li key={step.title} className="border-t-2 border-brand-yellow pt-4">
-                <span className="text-xs font-bold text-brand-orange">
-                  STEP {i + 1}
-                </span>
+                <span className="text-xs font-bold text-brand-orange">STEP {i + 1}</span>
                 <h3 className="mt-1 text-base font-bold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {step.body}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
               </li>
             ))}
           </ol>
@@ -199,11 +192,9 @@ function Home() {
       <section className="border-y border-border bg-brand-green-soft/40 section-y">
         <div className="container-page grid gap-8 lg:grid-cols-2">
           {(["ND", "HND"] as const).map((level) => (
-            <div key={level} className="rounded-2xl border border-border bg-card p-7">
+            <div key={level} className="rounded-2xl border border-border bg-card p-5 sm:p-7">
               <h2 className="text-xl font-extrabold md:text-2xl">
-                {level === "ND"
-                  ? "National Diploma (ND)"
-                  : "Higher National Diploma (HND)"}
+                {level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {level === "ND"
@@ -237,27 +228,28 @@ function Home() {
               About The Free School Foundation
             </h2>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              The Free School Foundation is an education-focused foundation based in Aba,
-              Abia State. We fund education for people who have the ability and the drive
-              but not the means — school leavers, working adults and anyone whose
-              education was interrupted by cost.
+              The Free School Foundation is an education-focused foundation based in Aba, Abia
+              State. We fund education for people who have the ability and the drive but not the
+              means — school leavers, working adults and anyone whose education was interrupted by
+              cost.
             </p>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              We work directly with recognised institutions so that every place we fund
-              leads to a real, recognised qualification. Our first campaign is a
-              partnership with Citi Polytechnic Abuja for 100% funded ND and HND places
-              through their Open Distance e-Learning Programme.
+              We work directly with recognised institutions so that every place we fund leads to a
+              real, recognised qualification. Our first campaign is a partnership with Citi
+              Polytechnic Abuja for 100% funded ND and HND places through their Open Distance
+              e-Learning Programme.
             </p>
             <Button asChild variant="outline" className="mt-6">
               <Link to="/about">Read more about us</Link>
             </Button>
           </div>
-          <div className="rounded-2xl border border-border bg-secondary/40 p-7">
+          <div className="rounded-2xl border border-border bg-secondary/40 p-5 sm:p-7">
+            <PartnerBar className="mb-6 bg-background" />
             <h3 className="text-lg font-bold">The partnership</h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the
-              academic programme through its Open Distance e-Learning format, so students
-              in Aba and beyond can study without relocating.
+              The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the academic
+              programme through its Open Distance e-Learning format, so students in Aba and beyond
+              can study without relocating.
             </p>
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
               {[
@@ -281,9 +273,7 @@ function Home() {
       {/* FAQ */}
       <section className="border-y border-border bg-secondary/40 section-y">
         <div className="container-page max-w-3xl">
-          <h2 className="text-2xl font-extrabold md:text-4xl">
-            Frequently asked questions
-          </h2>
+          <h2 className="text-2xl font-extrabold md:text-4xl">Frequently asked questions</h2>
           <Accordion type="single" collapsible className="mt-8">
             {FAQS.slice(0, 6).map((faq) => (
               <AccordionItem key={faq.q} value={faq.q}>
@@ -305,20 +295,17 @@ function Home() {
       {/* Office + contact */}
       <section className="section-y">
         <div className="container-page grid gap-8 md:grid-cols-2">
-          <div className="rounded-2xl border border-border p-7">
+          <div className="rounded-2xl border border-border p-5 sm:p-7">
             <MapPin className="h-6 w-6 text-brand-green" />
             <h2 className="mt-4 text-xl font-bold">Visit our office</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">{CONTACT.address}</p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Monday to Friday, 9:00am – 4:00pm
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">Monday to Friday, 9:00am – 4:00pm</p>
           </div>
-          <div className="rounded-2xl border border-border p-7">
+          <div className="rounded-2xl border border-border p-5 sm:p-7">
             <Phone className="h-6 w-6 text-brand-orange" />
             <h2 className="mt-4 text-xl font-bold">Talk to us</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              Call or send a WhatsApp message if you have a question about the
-              scholarship.
+              Call or send a WhatsApp message if you have a question about the scholarship.
             </p>
             <a
               href={`tel:${CONTACT.phoneHref}`}
@@ -340,8 +327,8 @@ function Home() {
             Your diploma is fully funded. The only step left is yours.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Applications for the Citi Polytechnic ODeL scholarship are open now. It takes
-            about 15 minutes.
+            Applications for the Citi Polytechnic ODeL scholarship are open now. It takes about 15
+            minutes.
           </p>
           <Button asChild size="lg" variant="secondary" className="mt-8 h-12 text-base">
             <Link to="/apply">

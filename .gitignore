@@ -14,11 +14,23 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+.vercel/
 *.local
+.env
+.env.*
+!.env.example
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# Local backup of the original nested clone. The application repository now
+# lives at the FREESCHOOLFOUNDATION root.
+/free-school-gateway/
 
 # Editor directories and files
 .vscode/*

@@ -8,10 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  DEMO_ANNOUNCEMENTS,
-  DEMO_APPLICATIONS,
-  DEMO_CAMPAIGNS,
-  DEMO_STAFF,
   type Announcement,
   type Application,
   type ApplicationStatus,
@@ -31,13 +27,13 @@ type State = {
   draft: Partial<Application> | null;
 };
 
-const STORAGE_KEY = "fsf-portal-state-v1";
+const STORAGE_KEY = "fsf-portal-state-v2";
 
 const initialState: State = {
-  applications: DEMO_APPLICATIONS,
-  announcements: DEMO_ANNOUNCEMENTS,
-  campaigns: DEMO_CAMPAIGNS,
-  staff: DEMO_STAFF,
+  applications: [],
+  announcements: [],
+  campaigns: [],
+  staff: [],
   currentApplicantId: null,
   draft: null,
 };
@@ -50,12 +46,7 @@ type Ctx = State & {
   submitApplication: (app: Application) => void;
   signInApplicant: (id: string) => void;
   signOutApplicant: () => void;
-  updateStatus: (
-    id: string,
-    status: ApplicationStatus,
-    by: string,
-    comment?: string,
-  ) => void;
+  updateStatus: (id: string, status: ApplicationStatus, by: string, comment?: string) => void;
   addNote: (id: string, note: Note) => void;
   sendMessage: (ids: string[], message: Omit<Message, "id">) => void;
   requestDocument: (id: string, doc: Doc) => void;
@@ -108,8 +99,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...state,
       ready,
       setState,
-      saveDraft: (patch) =>
-        setState((s) => ({ ...s, draft: { ...(s.draft ?? {}), ...patch } })),
+      saveDraft: (patch) => setState((s) => ({ ...s, draft: { ...(s.draft ?? {}), ...patch } })),
       clearDraft: () => setState((s) => ({ ...s, draft: null })),
       submitApplication: (app) =>
         setState((s) => ({
@@ -131,7 +121,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               status,
               at: new Date().toISOString(),
               by,
-              comment,
+              ...(comment ? { comment } : {}),
             },
           ],
         })),
@@ -156,8 +146,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : d,
           ),
         })),
-      addAnnouncement: (a) =>
-        setState((s) => ({ ...s, announcements: [a, ...s.announcements] })),
+      addAnnouncement: (a) => setState((s) => ({ ...s, announcements: [a, ...s.announcements] })),
       reset: () => setStateRaw(initialState),
     }),
     [state, ready, setState, patchApp],

@@ -1,0 +1,34 @@
+{
+  "name": "The Free School Foundation Scholarship Portal",
+  "short_name": "FSF Portal",
+  "description": "Apply for and track The Free School Foundation scholarships.",
+  "id": "/portal",
+  "start_url": "/portal",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#167a42",
+  "categories": ["education"],
+  "shortcuts": [
+    {
+      "name": "My application",
+      "short_name": "Application",
+      "url": "/portal"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

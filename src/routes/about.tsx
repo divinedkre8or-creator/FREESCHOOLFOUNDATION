@@ -40,25 +40,24 @@ function AboutPage() {
         <div className="container-page grid gap-10 lg:grid-cols-[1.3fr_1fr]">
           <div className="space-y-5 leading-relaxed text-muted-foreground">
             <p>
-              Across Nigeria, thousands of capable people leave school early or never
-              continue after secondary school — not because they lack ability, but
-              because the fees are out of reach. The Free School Foundation exists to
-              remove that barrier.
+              Across Nigeria, thousands of capable people leave school early or never continue after
+              secondary school — not because they lack ability, but because the fees are out of
+              reach. The Free School Foundation exists to remove that barrier.
             </p>
             <p>
-              We fund full scholarships in partnership with recognised institutions, so
-              that every place we fund leads to a qualification that employers and
-              further-study programmes accept. Applicants never pay us a fee — not to
-              apply, not to be shortlisted, not to enrol.
+              We fund full scholarships in partnership with recognised institutions, so that every
+              place we fund leads to a qualification that employers and further-study programmes
+              accept. Applicants never pay us a fee — not to apply, not to be shortlisted, not to
+              enrol.
             </p>
             <p>
-              Our work is deliberately practical. We choose programmes with clear career
-              value, study formats that fit around work and family, and an application
-              process that can be completed on an inexpensive phone using mobile data.
+              Our work is deliberately practical. We choose programmes with clear career value,
+              study formats that fit around work and family, and an application process that can be
+              completed on an inexpensive phone using mobile data.
             </p>
             <p>
-              The Foundation is run from our office in Aba, where applicants are welcome
-              to visit us in person with questions about the scholarship.
+              The Foundation is run from our office in Aba, where applicants are welcome to visit us
+              in person with questions about the scholarship.
             </p>
           </div>
 
@@ -83,9 +82,7 @@ function AboutPage() {
               <div key={item.title} className="rounded-2xl border border-border p-6">
                 <item.icon className="h-6 w-6 text-brand-green" />
                 <h2 className="mt-3 font-bold">{item.title}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {item.body}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
               </div>
             ))}
           </div>
@@ -98,9 +95,9 @@ function AboutPage() {
             Our partnership with Citi Polytechnic
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the
-            academic programme through its Open Distance e-Learning Programme, so
-            students can study from Aba without relocating.
+            The Foundation funds the scholarship. Citi Polytechnic Abuja delivers the academic
+            programme through its Open Distance e-Learning Programme, so students can study from Aba
+            without relocating.
           </p>
           <PartnerBar className="mt-8 max-w-2xl" />
         </div>

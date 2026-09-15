@@ -14,10 +14,7 @@ export const PROGRAMMES = [
 
 export type Programme = (typeof PROGRAMMES)[number];
 
-export const PROGRAMME_DETAILS: Record<
-  Programme,
-  { blurb: string; careers: string[] }
-> = {
+export const PROGRAMME_DETAILS: Record<Programme, { blurb: string; careers: string[] }> = {
   "Mass Communication": {
     blurb:
       "Reporting, broadcasting, public relations and digital media for Nigeria's fast-growing media industry.",
@@ -34,19 +31,53 @@ export const PROGRAMME_DETAILS: Record<
     careers: ["Software Developer", "Data Analyst", "IT Support", "Web Developer"],
   },
   "Electrical Engineering": {
-    blurb:
-      "Electrical installation, power systems, electronics and maintenance practice.",
+    blurb: "Electrical installation, power systems, electronics and maintenance practice.",
     careers: ["Electrical Technician", "Power Systems Officer", "Maintenance Engineer"],
   },
   "Computer Engineering": {
-    blurb:
-      "Hardware, embedded systems, networking and computer maintenance skills.",
+    blurb: "Hardware, embedded systems, networking and computer maintenance skills.",
     careers: ["Hardware Engineer", "Network Engineer", "Systems Technician"],
   },
 };
 
 export const NIGERIAN_STATES = [
-  "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT - Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara",
+  "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "FCT - Abuja",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
 ] as const;
 
 export type ApplicationStatus =
@@ -132,6 +163,7 @@ export type Doc = {
   size?: string;
   requested?: boolean;
   uploaded: boolean;
+  scanStatus?: "pending" | "clean" | "rejected" | "failed";
 };
 
 export type Message = {
@@ -142,6 +174,7 @@ export type Message = {
   sentAt: string;
   channel: "Portal" | "SMS";
   read: boolean;
+  priority?: "normal" | "high";
 };
 
 export type Note = { id: string; author: string; body: string; createdAt: string };
@@ -252,12 +285,14 @@ export const CONTACT = {
 /* Demo data                                                           */
 /* ------------------------------------------------------------------ */
 
-const iso = (daysAgo: number) =>
-  new Date(Date.now() - daysAgo * 86400000).toISOString();
+// Historical fixtures are retained only as typed development references.
+// Keep this compile-time flag false so no synthetic people or staff ship.
+const INCLUDE_DEMO_DATA = false;
+
+const iso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86400000).toISOString();
 
 let counter = 1284;
-export const nextAppNumber = () =>
-  `FSF-2026-${String(++counter).padStart(6, "0").slice(-6)}`;
+export const nextAppNumber = () => `FSF-2026-${String(++counter).padStart(6, "0").slice(-6)}`;
 
 function mk(
   partial: Partial<Application> & {
@@ -276,7 +311,7 @@ function mk(
     id,
     appNumber: `FSF-2026-00${id}`,
     createdAt: iso(days + 2),
-    submittedAt: status === "Draft" ? undefined : iso(days),
+    ...(status === "Draft" ? {} : { submittedAt: iso(days) }),
     status,
     campaign: "Citi Polytechnic ODeL Scholarship 2026",
     level,
@@ -308,7 +343,7 @@ function mk(
           },
     scholarship: {
       employmentStatus: Number(id) % 2 ? "Employed" : "Unemployed",
-      occupation: Number(id) % 2 ? "Shop assistant" : undefined,
+      ...(Number(id) % 2 ? { occupation: "Shop assistant" } : {}),
       reason:
         "I stopped schooling because of finances and I want to complete my education while still working.",
       goals:
@@ -354,112 +389,228 @@ function mk(
   };
 }
 
-export const DEMO_APPLICATIONS: Application[] = [
-  mk({ id: "1284", first: "Chidera", last: "Okafor", level: "ND", programme: "Computer Science", status: "Under Review", days: 6, state: "Abia" }),
-  mk({ id: "1285", first: "Amina", last: "Bello", level: "HND", programme: "Mass Communication", status: "Shortlisted", days: 9, state: "Kano" }),
-  mk({ id: "1286", first: "Emeka", last: "Nwachukwu", level: "ND", programme: "Electrical Engineering", status: "Submitted", days: 2, state: "Imo" }),
-  mk({ id: "1287", first: "Blessing", last: "Adeyemi", level: "HND", programme: "Business Administration and Management", status: "Approved", days: 14, state: "Lagos" }),
-  mk({ id: "1288", first: "Samuel", last: "Ikenna", level: "ND", programme: "Computer Engineering", status: "Additional Documents Required", days: 5, state: "Abia" }),
-  mk({ id: "1289", first: "Halima", last: "Yusuf", level: "ND", programme: "Business Administration and Management", status: "Enrolled", days: 21, state: "Kaduna" }),
-  mk({ id: "1290", first: "Peter", last: "Etim", level: "HND", programme: "Computer Science", status: "Not Successful", days: 18, state: "Akwa Ibom" }),
-  mk({ id: "1291", first: "Ngozi", last: "Uche", level: "ND", programme: "Mass Communication", status: "Draft", days: 1, state: "Enugu" }),
-  mk({ id: "1292", first: "Tunde", last: "Balogun", level: "ND", programme: "Computer Science", status: "Under Review", days: 4, state: "Oyo" }),
-  mk({ id: "1293", first: "Rita", last: "Obi", level: "HND", programme: "Electrical Engineering", status: "Submitted", days: 3, state: "Anambra" }),
-  mk({ id: "1294", first: "Joshua", last: "Effiong", level: "ND", programme: "Computer Engineering", status: "Shortlisted", days: 8, state: "Cross River" }),
-  mk({ id: "1295", first: "Mary", last: "Danjuma", level: "ND", programme: "Business Administration and Management", status: "Under Review", days: 7, state: "Plateau" }),
-];
+export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
+  ? [
+      mk({
+        id: "1284",
+        first: "Chidera",
+        last: "Okafor",
+        level: "ND",
+        programme: "Computer Science",
+        status: "Under Review",
+        days: 6,
+        state: "Abia",
+      }),
+      mk({
+        id: "1285",
+        first: "Amina",
+        last: "Bello",
+        level: "HND",
+        programme: "Mass Communication",
+        status: "Shortlisted",
+        days: 9,
+        state: "Kano",
+      }),
+      mk({
+        id: "1286",
+        first: "Emeka",
+        last: "Nwachukwu",
+        level: "ND",
+        programme: "Electrical Engineering",
+        status: "Submitted",
+        days: 2,
+        state: "Imo",
+      }),
+      mk({
+        id: "1287",
+        first: "Blessing",
+        last: "Adeyemi",
+        level: "HND",
+        programme: "Business Administration and Management",
+        status: "Approved",
+        days: 14,
+        state: "Lagos",
+      }),
+      mk({
+        id: "1288",
+        first: "Samuel",
+        last: "Ikenna",
+        level: "ND",
+        programme: "Computer Engineering",
+        status: "Additional Documents Required",
+        days: 5,
+        state: "Abia",
+      }),
+      mk({
+        id: "1289",
+        first: "Halima",
+        last: "Yusuf",
+        level: "ND",
+        programme: "Business Administration and Management",
+        status: "Enrolled",
+        days: 21,
+        state: "Kaduna",
+      }),
+      mk({
+        id: "1290",
+        first: "Peter",
+        last: "Etim",
+        level: "HND",
+        programme: "Computer Science",
+        status: "Not Successful",
+        days: 18,
+        state: "Akwa Ibom",
+      }),
+      mk({
+        id: "1291",
+        first: "Ngozi",
+        last: "Uche",
+        level: "ND",
+        programme: "Mass Communication",
+        status: "Draft",
+        days: 1,
+        state: "Enugu",
+      }),
+      mk({
+        id: "1292",
+        first: "Tunde",
+        last: "Balogun",
+        level: "ND",
+        programme: "Computer Science",
+        status: "Under Review",
+        days: 4,
+        state: "Oyo",
+      }),
+      mk({
+        id: "1293",
+        first: "Rita",
+        last: "Obi",
+        level: "HND",
+        programme: "Electrical Engineering",
+        status: "Submitted",
+        days: 3,
+        state: "Anambra",
+      }),
+      mk({
+        id: "1294",
+        first: "Joshua",
+        last: "Effiong",
+        level: "ND",
+        programme: "Computer Engineering",
+        status: "Shortlisted",
+        days: 8,
+        state: "Cross River",
+      }),
+      mk({
+        id: "1295",
+        first: "Mary",
+        last: "Danjuma",
+        level: "ND",
+        programme: "Business Administration and Management",
+        status: "Under Review",
+        days: 7,
+        state: "Plateau",
+      }),
+    ]
+  : [];
 
-DEMO_APPLICATIONS[4]!.documents.push({
-  id: "d3",
-  name: "Birth Certificate",
-  type: "Birth Certificate",
-  uploadedAt: "",
-  requested: true,
-  uploaded: false,
-});
+if (INCLUDE_DEMO_DATA) {
+  DEMO_APPLICATIONS[4]!.documents.push({
+    id: "d3",
+    name: "Birth Certificate",
+    type: "Birth Certificate",
+    uploadedAt: "",
+    requested: true,
+    uploaded: false,
+  });
+}
 
-export const DEMO_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: "a1",
-    title: "Application deadline extended",
-    body: "The deadline for the Citi Polytechnic ODeL scholarship has been extended to 30 November 2026. Encourage others to apply.",
-    audience: "All applicants",
-    createdAt: iso(3),
-  },
-  {
-    id: "a2",
-    title: "Verification calls begin next week",
-    body: "Shortlisted applicants will receive a verification call from the Foundation. Please keep your phone reachable.",
-    audience: "Shortlisted applicants",
-    createdAt: iso(6),
-  },
-];
+export const DEMO_ANNOUNCEMENTS: Announcement[] = INCLUDE_DEMO_DATA
+  ? [
+      {
+        id: "a1",
+        title: "Application deadline extended",
+        body: "The deadline for the Citi Polytechnic ODeL scholarship has been extended to 30 November 2026. Encourage others to apply.",
+        audience: "All applicants",
+        createdAt: iso(3),
+      },
+      {
+        id: "a2",
+        title: "Verification calls begin next week",
+        body: "Shortlisted applicants will receive a verification call from the Foundation. Please keep your phone reachable.",
+        audience: "Shortlisted applicants",
+        createdAt: iso(6),
+      },
+    ]
+  : [];
 
-export const DEMO_CAMPAIGNS: Campaign[] = [
-  {
-    id: "c1",
-    name: "Citi Polytechnic ODeL Scholarship 2026",
-    partner: "Citi Polytechnic Abuja",
-    description:
-      "100% funded ND and HND places through Citi Polytechnic's Open Distance e-Learning Programme, studied from Aba.",
-    programmes: [...PROGRAMMES],
-    opensOn: "2026-08-01",
-    deadline: "2026-11-30",
-    status: "Active",
-    applicants: DEMO_APPLICATIONS.length,
-  },
-  {
-    id: "c2",
-    name: "Foundation Skills Grant 2027",
-    partner: "To be confirmed",
-    description: "Planned vocational skills grant for young people in Abia State.",
-    programmes: [],
-    opensOn: "2027-01-15",
-    deadline: "2027-03-31",
-    status: "Draft",
-    applicants: 0,
-  },
-];
+export const DEMO_CAMPAIGNS: Campaign[] = INCLUDE_DEMO_DATA
+  ? [
+      {
+        id: "c1",
+        name: "Citi Polytechnic ODeL Scholarship 2026",
+        partner: "Citi Polytechnic Abuja",
+        description:
+          "100% funded ND and HND places through Citi Polytechnic's Open Distance e-Learning Programme, studied from Aba.",
+        programmes: [...PROGRAMMES],
+        opensOn: "2026-08-01",
+        deadline: "2026-11-30",
+        status: "Active",
+        applicants: DEMO_APPLICATIONS.length,
+      },
+      {
+        id: "c2",
+        name: "Foundation Skills Grant 2027",
+        partner: "To be confirmed",
+        description: "Planned vocational skills grant for young people in Abia State.",
+        programmes: [],
+        opensOn: "2027-01-15",
+        deadline: "2027-03-31",
+        status: "Draft",
+        applicants: 0,
+      },
+    ]
+  : [];
 
-export const DEMO_STAFF: StaffMember[] = [
-  {
-    id: "s1",
-    name: "Grace Nwosu",
-    email: "grace@freeschoolfoundation.com.ng",
-    role: "Super Admin",
-    permissions: [...PERMISSIONS],
-    active: true,
-  },
-  {
-    id: "s2",
-    name: "Daniel Okoro",
-    email: "daniel@freeschoolfoundation.com.ng",
-    role: "Reviewer",
-    permissions: ["Review applications", "Change statuses", "View documents"],
-    active: true,
-  },
-  {
-    id: "s3",
-    name: "Ify Chukwu",
-    email: "ify@freeschoolfoundation.com.ng",
-    role: "Communications",
-    permissions: ["Send communications", "View documents"],
-    active: true,
-  },
-  {
-    id: "s4",
-    name: "Sunday Adeniyi",
-    email: "sunday@freeschoolfoundation.com.ng",
-    role: "Viewer",
-    permissions: ["Review applications"],
-    active: false,
-  },
-];
+export const DEMO_STAFF: StaffMember[] = INCLUDE_DEMO_DATA
+  ? [
+      {
+        id: "s1",
+        name: "Grace Nwosu",
+        email: "grace@freeschoolfoundation.com.ng",
+        role: "Super Admin",
+        permissions: [...PERMISSIONS],
+        active: true,
+      },
+      {
+        id: "s2",
+        name: "Daniel Okoro",
+        email: "daniel@freeschoolfoundation.com.ng",
+        role: "Reviewer",
+        permissions: ["Review applications", "Change statuses", "View documents"],
+        active: true,
+      },
+      {
+        id: "s3",
+        name: "Ify Chukwu",
+        email: "ify@freeschoolfoundation.com.ng",
+        role: "Communications",
+        permissions: ["Send communications", "View documents"],
+        active: true,
+      },
+      {
+        id: "s4",
+        name: "Sunday Adeniyi",
+        email: "sunday@freeschoolfoundation.com.ng",
+        role: "Viewer",
+        permissions: ["Review applications"],
+        active: false,
+      },
+    ]
+  : [];
 
 export const fullName = (a: Application) =>
-  [a.personal.firstName, a.personal.middleName, a.personal.lastName]
-    .filter(Boolean)
-    .join(" ");
+  [a.personal.firstName, a.personal.middleName, a.personal.lastName].filter(Boolean).join(" ");
 
 export const formatDate = (value?: string) =>
   value
