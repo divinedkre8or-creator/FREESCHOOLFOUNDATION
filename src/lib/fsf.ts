@@ -274,6 +274,8 @@ export const PERMISSIONS = [
 
 export const CONTACT = {
   org: "The Free School Foundation",
+  email: "info@thefreeschoolfoundation.com.ng",
+  emailHref: "mailto:info@thefreeschoolfoundation.com.ng",
   address: "26 Crystal Park Road, Off Port Harcourt Road, Aba, Abia State.",
   phone: "+234 812 685 9803",
   phoneHref: "+2348126859803",

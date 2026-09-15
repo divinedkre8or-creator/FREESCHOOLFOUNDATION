@@ -33,8 +33,8 @@ function TermsPage() {
         description="Important conditions for creating an account and submitting a scholarship application."
       />
       <article className="container-page max-w-3xl py-10 text-sm leading-7 md:py-14">
-        <p className="rounded-xl bg-brand-orange-soft p-4 font-semibold text-brand-orange">
-          Draft for Foundation approval before public launch · Last updated 15 September 2026
+        <p className="rounded-xl bg-brand-green-soft p-4 font-semibold text-brand-green-dark">
+          Official Application Terms · Effective 15 September 2026
         </p>
         <Term title="Applying is free">
           The Free School Foundation does not charge an application fee. Do not pay anyone to submit
@@ -71,7 +71,7 @@ function TermsPage() {
         <Term title="Changes and support">
           The Foundation may correct or update these terms and will state the effective date.
           Material changes affecting an active application will be communicated where appropriate.
-          Contact +234 812 685 9803 or officialnwachukwudivine@gmail.com for support.
+          Contact +234 812 685 9803 or info@thefreeschoolfoundation.com.ng for support.
         </Term>
         <p className="mt-10 border-t border-border pt-6">
           How we handle information is explained in the{" "}

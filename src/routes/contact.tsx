@@ -61,8 +61,9 @@ function ContactPage() {
               },
               {
                 icon: Mail,
-                title: "Website",
-                body: CONTACT.website,
+                title: "Email address",
+                body: CONTACT.email,
+                href: CONTACT.emailHref,
               },
               {
                 icon: Clock,

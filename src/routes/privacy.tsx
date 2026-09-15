@@ -33,8 +33,8 @@ function PrivacyPage() {
         description="How The Free School Foundation handles information submitted through the scholarship portal."
       />
       <article className="container-page max-w-3xl py-10 text-sm leading-7 md:py-14">
-        <p className="rounded-xl bg-brand-orange-soft p-4 font-semibold text-brand-orange">
-          Draft for Foundation approval before public launch · Last updated 15 September 2026
+        <p className="rounded-xl bg-brand-green-soft p-4 font-semibold text-brand-green-dark">
+          Official Privacy Notice · Effective 15 September 2026
         </p>
         <LegalSection title="Who controls your information">
           <p>
@@ -43,9 +43,9 @@ function PrivacyPage() {
             requests may be sent to{" "}
             <a
               className="font-bold text-brand-green-dark"
-              href="mailto:officialnwachukwudivine@gmail.com"
+              href="mailto:info@thefreeschoolfoundation.com.ng"
             >
-              officialnwachukwudivine@gmail.com
+              info@thefreeschoolfoundation.com.ng
             </a>{" "}
             or made by calling +234 812 685 9803.
           </p>
