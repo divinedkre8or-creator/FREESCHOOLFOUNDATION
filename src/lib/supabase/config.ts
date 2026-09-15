@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const DEFAULT_SUPABASE_URL = "https://amzcvuknjtpsrktkdhcf.supabase.co";
+const DEFAULT_SUPABASE_KEY = "sb_publishable_kUZnrUmMLb1lDBpNI9bBUg_lCaTDhXA";
+
 const publicSupabaseConfigSchema = z.object({
   url: z.string().url(),
   publishableKey: z.string().min(20),
@@ -11,7 +14,14 @@ export function parsePublicSupabaseConfig(input: {
   url: string | undefined;
   publishableKey: string | undefined;
 }): PublicSupabaseConfig {
-  return publicSupabaseConfigSchema.parse(input);
+  const resolved = {
+    url: input.url && input.url.trim() !== "" ? input.url : DEFAULT_SUPABASE_URL,
+    publishableKey:
+      input.publishableKey && input.publishableKey.trim() !== ""
+        ? input.publishableKey
+        : DEFAULT_SUPABASE_KEY,
+  };
+  return publicSupabaseConfigSchema.parse(resolved);
 }
 
 export function getBrowserSupabaseConfig(): PublicSupabaseConfig {

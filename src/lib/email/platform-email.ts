@@ -16,15 +16,22 @@ const inputSchema = z.object({
 const sendPlatformEmailBatch = createServerFn({ method: "POST" })
   .validator(inputSchema)
   .handler(async ({ data }) => {
-    const supabaseUrl = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+    const supabaseUrl =
+      process.env["SUPABASE_URL"] ||
+      process.env["VITE_SUPABASE_URL"] ||
+      "https://amzcvuknjtpsrktkdhcf.supabase.co";
     const publishableKey =
-      process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+      process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+      process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+      "sb_publishable_kUZnrUmMLb1lDBpNI9bBUg_lCaTDhXA";
     const resendKey = process.env["RESEND_API_KEY"];
-    const from = process.env["RESEND_FROM_EMAIL"];
-    const replyTo = process.env["RESEND_REPLY_TO"];
-    const appBaseUrl = process.env["APP_BASE_URL"];
-    if (!supabaseUrl || !publishableKey || !resendKey || !from || !appBaseUrl)
-      throw new Error("Platform email is not configured.");
+    const from =
+      process.env["RESEND_FROM_EMAIL"] ||
+      "The Free School Foundation <notifications@updates.thefreeschoolfoundation.com.ng>";
+    const replyTo = process.env["RESEND_REPLY_TO"] || "info@thefreeschoolfoundation.com.ng";
+    const appBaseUrl =
+      process.env["APP_BASE_URL"] || "https://thefreeschoolfoundation.com.ng";
+    if (!resendKey) throw new Error("Platform email is not configured.");
 
     const supabase = createClient(supabaseUrl, publishableKey, {
       global: { headers: { Authorization: `Bearer ${data.accessToken}` } },
