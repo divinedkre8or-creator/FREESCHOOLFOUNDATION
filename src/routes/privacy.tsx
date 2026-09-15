@@ -1,8 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHero, SiteLayout } from "@/components/site/SiteLayout";
+import { breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Notice | The Free School Foundation" }] }),
+  head: () =>
+    seoHead({
+      title: "Privacy Notice | The Free School Foundation",
+      description:
+        "Read how The Free School Foundation collects, uses, protects and manages information submitted through its scholarship website and applicant portal.",
+      path: "/privacy",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Privacy Notice", path: "/privacy" },
+            ]),
+          ),
+        },
+      ],
+    }),
   component: PrivacyPage,
 });
 

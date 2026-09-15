@@ -9,39 +9,36 @@ import {
 import { Button } from "@/components/ui/button";
 import { FAQS } from "@/lib/content";
 import { CONTACT } from "@/lib/fsf";
+import { breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/faqs")({
-  head: () => ({
-    meta: [
-      { title: "Scholarship FAQs | The Free School Foundation" },
-      {
-        name: "description",
-        content:
-          "Answers about eligibility, documents, deadlines, distance learning and how scholarship decisions are made.",
-      },
-      { property: "og:title", content: "Scholarship FAQs" },
-      {
-        property: "og:description",
-        content: "Common questions about the 100% funded ND and HND scholarship.",
-      },
-      { property: "og:url", content: "/faqs" },
-    ],
-    links: [{ rel: "canonical", href: "/faqs" }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: FAQS.map((f) => ({
-            "@type": "Question",
-            name: f.q,
-            acceptedAnswer: { "@type": "Answer", text: f.a },
-          })),
-        }),
-      },
-    ],
-  }),
+  head: () =>
+    seoHead({
+      title: "ND & HND Scholarship FAQs | The Free School Foundation",
+      description:
+        "Get clear answers about scholarship eligibility, required documents, fees, deadlines, distance learning, applications and selection decisions.",
+      path: "/faqs",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify([
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Frequently Asked Questions", path: "/faqs" },
+            ]),
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: FAQS.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            },
+          ]),
+        },
+      ],
+    }),
   component: FaqPage,
 });
 

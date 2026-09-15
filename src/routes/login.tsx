@@ -7,8 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { seoHead } from "@/lib/seo";
 
-export const Route = createFileRoute("/login")({ component: LoginPage });
+export const Route = createFileRoute("/login")({
+  head: () =>
+    seoHead({
+      title: "Applicant Login | The Free School Foundation",
+      description: "Secure applicant access to The Free School Foundation scholarship portal.",
+      path: "/login",
+      noIndex: true,
+    }),
+  component: LoginPage,
+});
 
 function LoginPage() {
   const [email, setEmail] = useState("");

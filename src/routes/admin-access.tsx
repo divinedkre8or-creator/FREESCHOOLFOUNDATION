@@ -6,9 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/admin-access")({
-  head: () => ({ meta: [{ title: "Scholarship Panel Access | The Free School Foundation" }] }),
+  head: () =>
+    seoHead({
+      title: "Scholarship Panel Access | The Free School Foundation",
+      description: "Restricted administrator access for the Foundation scholarship panel.",
+      path: "/admin-access",
+      noIndex: true,
+    }),
   component: AdminAccessPage,
 });
 

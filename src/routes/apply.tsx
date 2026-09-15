@@ -29,9 +29,16 @@ import { useStore } from "@/lib/store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { submitApplicationToSupabase } from "@/lib/supabase/applications";
 import { sendPlatformEmail } from "@/lib/email/platform-email";
+import { seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/apply")({
-  head: () => ({ meta: [{ title: "Apply for Scholarship | The Free School Foundation" }] }),
+  head: () =>
+    seoHead({
+      title: "Apply for Scholarship | The Free School Foundation",
+      description: "Create an account or continue your private scholarship application.",
+      path: "/apply",
+      noIndex: true,
+    }),
   component: ApplyPage,
 });
 

@@ -8,25 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CONTACT } from "@/lib/fsf";
+import { breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title: "Contact The Free School Foundation | Aba, Abia State" },
-      {
-        name: "description",
-        content:
-          "Reach the Foundation office at 26 Crystal Park Road, Off Port Harcourt Road, Aba. Call or WhatsApp +234 812 685 9803.",
-      },
-      { property: "og:title", content: "Contact The Free School Foundation" },
-      {
-        property: "og:description",
-        content: "Office address, phone and WhatsApp details for scholarship enquiries.",
-      },
-      { property: "og:url", content: "/contact" },
-    ],
-    links: [{ rel: "canonical", href: "/contact" }],
-  }),
+  head: () =>
+    seoHead({
+      title: "Contact The Free School Foundation | Aba, Abia State",
+      description:
+        "Contact The Free School Foundation at 26 Crystal Park Road, Off Port Harcourt Road, Aba, Abia State. Call or WhatsApp +234 812 685 9803.",
+      path: "/contact",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Contact", path: "/contact" },
+            ]),
+          ),
+        },
+      ],
+    }),
   component: ContactPage,
 });
 

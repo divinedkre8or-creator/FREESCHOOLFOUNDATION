@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
 import { Toaster } from "@/components/ui/sonner";
+import { CONTACT } from "@/lib/fsf";
+import { DEFAULT_SOCIAL_IMAGE, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -91,8 +93,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "The Free School Foundation" },
+      { property: "og:site_name", content: SITE_NAME },
+      { property: "og:locale", content: "en_NG" },
+      { property: "og:image", content: DEFAULT_SOCIAL_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: DEFAULT_SOCIAL_IMAGE },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -105,6 +112,42 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify([
+          {
+            "@context": "https://schema.org",
+            "@type": "EducationalOrganization",
+            "@id": `${SITE_URL}/#organization`,
+            name: SITE_NAME,
+            url: SITE_URL,
+            logo: `${SITE_URL}/favicon.png`,
+            image: DEFAULT_SOCIAL_IMAGE,
+            description:
+              "An education foundation in Aba funding diploma opportunities for Nigerians who have the drive but not the means.",
+            telephone: CONTACT.phoneHref,
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "26 Crystal Park Road, Off Port Harcourt Road",
+              addressLocality: "Aba",
+              addressRegion: "Abia State",
+              addressCountry: "NG",
+            },
+            areaServed: { "@type": "Country", name: "Nigeria" },
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "@id": `${SITE_URL}/#website`,
+            url: SITE_URL,
+            name: SITE_NAME,
+            inLanguage: "en-NG",
+            publisher: { "@id": `${SITE_URL}/#organization` },
+          },
+        ]),
+      },
     ],
   }),
   shellComponent: RootShell,

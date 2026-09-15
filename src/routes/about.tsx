@@ -4,26 +4,27 @@ import { PageHero, SiteLayout } from "@/components/site/SiteLayout";
 import { PartnerBar } from "@/components/site/PartnerBar";
 import { Button } from "@/components/ui/button";
 import { CONTACT } from "@/lib/fsf";
+import { breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({
-    meta: [
-      { title: "About Us — The Free School Foundation" },
-      {
-        name: "description",
-        content:
-          "The Free School Foundation funds education for people in Nigeria who have the drive but not the means. Based in Aba, Abia State.",
-      },
-      { property: "og:title", content: "About The Free School Foundation" },
-      {
-        property: "og:description",
-        content:
-          "An education foundation in Aba funding fully paid diploma places in partnership with recognised institutions.",
-      },
-      { property: "og:url", content: "/about" },
-    ],
-    links: [{ rel: "canonical", href: "/about" }],
-  }),
+  head: () =>
+    seoHead({
+      title: "About Us | The Free School Foundation",
+      description:
+        "The Free School Foundation is an education foundation in Aba, Abia State, funding diploma opportunities for Nigerians who have the drive but not the means.",
+      path: "/about",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "About", path: "/about" },
+            ]),
+          ),
+        },
+      ],
+    }),
   component: AboutPage,
 });
 

@@ -3,25 +3,40 @@ import { ArrowRight } from "lucide-react";
 import { PageHero, SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { PROGRAMMES, PROGRAMME_DETAILS } from "@/lib/fsf";
+import { absoluteUrl, breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/programmes")({
-  head: () => ({
-    meta: [
-      { title: "Programmes — ND & HND Options | The Free School Foundation" },
-      {
-        name: "description",
-        content:
-          "Mass Communication, Business Administration, Computer Science, Electrical Engineering and Computer Engineering — available at ND and HND level.",
-      },
-      { property: "og:title", content: "Scholarship Programmes — ND and HND" },
-      {
-        property: "og:description",
-        content: "Five fully funded programmes available at both ND and HND level.",
-      },
-      { property: "og:url", content: "/programmes" },
-    ],
-    links: [{ rel: "canonical", href: "/programmes" }],
-  }),
+  head: () =>
+    seoHead({
+      title: "Fully Funded ND & HND Programmes | The Free School Foundation",
+      description:
+        "Explore fully funded ND and HND options in Computer Science, Computer Engineering, Electrical Engineering, Mass Communication and Business Administration.",
+      path: "/programmes",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify([
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Programmes", path: "/programmes" },
+            ]),
+            {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              name: "Fully funded ND and HND programmes",
+              url: absoluteUrl("/programmes"),
+              numberOfItems: PROGRAMMES.length,
+              itemListElement: PROGRAMMES.map((name, index) => ({
+                "@type": "ListItem",
+                position: index + 1,
+                name,
+                url: absoluteUrl("/programmes"),
+              })),
+            },
+          ]),
+        },
+      ],
+    }),
   component: ProgrammesPage,
 });
 

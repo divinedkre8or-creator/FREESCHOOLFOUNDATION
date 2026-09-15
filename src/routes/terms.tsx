@@ -1,8 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHero, SiteLayout } from "@/components/site/SiteLayout";
+import { breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({ meta: [{ title: "Scholarship Portal Terms | The Free School Foundation" }] }),
+  head: () =>
+    seoHead({
+      title: "Scholarship Application Terms | The Free School Foundation",
+      description:
+        "Read the conditions for creating an account and submitting an application to The Free School Foundation scholarship portal.",
+      path: "/terms",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Application Terms", path: "/terms" },
+            ]),
+          ),
+        },
+      ],
+    }),
   component: TermsPage,
 });
 

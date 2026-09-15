@@ -19,8 +19,18 @@ import {
   markMessageRead,
   uploadRequestedDocument,
 } from "@/lib/supabase/applications";
+import { seoHead } from "@/lib/seo";
 
-export const Route = createFileRoute("/portal")({ component: PortalPage });
+export const Route = createFileRoute("/portal")({
+  head: () =>
+    seoHead({
+      title: "Applicant Portal | The Free School Foundation",
+      description: "Private scholarship application status, documents and messages.",
+      path: "/portal",
+      noIndex: true,
+    }),
+  component: PortalPage,
+});
 
 function PortalPage() {
   const [section, setSection] = useState<PortalSection>("overview");

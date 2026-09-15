@@ -5,8 +5,18 @@ import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { loadAdminApplications } from "@/lib/supabase/applications";
 import { useStore } from "@/lib/store";
+import { seoHead } from "@/lib/seo";
 
-export const Route = createFileRoute("/admin")({ component: AdminRoute });
+export const Route = createFileRoute("/admin")({
+  head: () =>
+    seoHead({
+      title: "Scholarship Administration | The Free School Foundation",
+      description: "Restricted scholarship administration area.",
+      path: "/admin",
+      noIndex: true,
+    }),
+  component: AdminRoute,
+});
 function AdminRoute() {
   const [access, setAccess] = useState<"loading" | "allowed" | "denied">("loading");
   const { setState } = useStore();

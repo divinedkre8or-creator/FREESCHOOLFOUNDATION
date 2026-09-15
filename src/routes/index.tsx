@@ -21,29 +21,16 @@ import {
 import { CONTACT, PROGRAMMES, PROGRAMME_DETAILS } from "@/lib/fsf";
 import { ELIGIBILITY, FAQS, STEPS_HOW_IT_WORKS } from "@/lib/content";
 import heroImage from "@/assets/hero-student.jpg";
+import { seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "100% Free ND & HND Scholarship | The Free School Foundation" },
-      {
-        name: "description",
-        content:
-          "Get your ND or HND 100% free. Study from Aba through Citi Polytechnic's Open Distance e-Learning Programme, fully funded by The Free School Foundation.",
-      },
-      {
-        property: "og:title",
-        content: "100% Free ND & HND Scholarship | The Free School Foundation",
-      },
-      {
-        property: "og:description",
-        content:
-          "Fully funded ND and HND places for Nigerians ready to advance their education. Apply online in 15 minutes.",
-      },
-      { property: "og:url", content: "/" },
-    ],
-    links: [{ rel: "canonical", href: "/" }],
-  }),
+  head: () =>
+    seoHead({
+      title: "100% Free ND & HND Scholarship | The Free School Foundation",
+      description:
+        "Apply for a 100% funded ND or HND scholarship in Nigeria. Study through Citi Polytechnic's Open Distance e-Learning Programme with no tuition or application fee.",
+      path: "/",
+    }),
   component: Home,
 });
 

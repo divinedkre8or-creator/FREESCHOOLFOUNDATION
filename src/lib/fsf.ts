@@ -277,7 +277,7 @@ export const CONTACT = {
   address: "26 Crystal Park Road, Off Port Harcourt Road, Aba, Abia State.",
   phone: "+234 812 685 9803",
   phoneHref: "+2348126859803",
-  website: "www.freeschoolfoundation.com.ng",
+  website: "thefreeschoolfoundation.com.ng",
   partner: "Citi Polytechnic Abuja",
 };
 

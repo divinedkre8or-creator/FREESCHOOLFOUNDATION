@@ -5,26 +5,27 @@ import { PartnerBar } from "@/components/site/PartnerBar";
 import { Button } from "@/components/ui/button";
 import { ELIGIBILITY, STEPS_HOW_IT_WORKS } from "@/lib/content";
 import { PROGRAMMES } from "@/lib/fsf";
+import { breadcrumbSchema, seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/scholarship")({
-  head: () => ({
-    meta: [
-      { title: "The Scholarship — 100% Funded ND & HND | Free School Foundation" },
-      {
-        name: "description",
-        content:
-          "Everything about the Citi Polytechnic ODeL scholarship: what is covered, who can apply, required documents and how to apply.",
-      },
-      { property: "og:title", content: "The Citi Polytechnic ODeL Scholarship" },
-      {
-        property: "og:description",
-        content:
-          "100% tuition covered for ND and HND programmes, studied from Aba through distance e-learning.",
-      },
-      { property: "og:url", content: "/scholarship" },
-    ],
-    links: [{ rel: "canonical", href: "/scholarship" }],
-  }),
+  head: () =>
+    seoHead({
+      title: "100% Funded ND & HND Scholarship | The Free School Foundation",
+      description:
+        "Learn what the Citi Polytechnic ODeL scholarship covers, who can apply, the required documents, available ND and HND programmes, and how to apply online.",
+      path: "/scholarship",
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Scholarship", path: "/scholarship" },
+            ]),
+          ),
+        },
+      ],
+    }),
   component: ScholarshipPage,
 });
 
