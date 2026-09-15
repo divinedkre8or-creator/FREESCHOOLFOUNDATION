@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getServerSupabaseConfig } from "@/lib/supabase/config";
 
 const deleteInputSchema = z.object({
   accessToken: z.string().min(20),
@@ -11,15 +12,8 @@ const deleteInputSchema = z.object({
 export const deleteApplicationRecordServerFn = createServerFn({ method: "POST" })
   .validator(deleteInputSchema)
   .handler(async ({ data }) => {
-    const supabaseUrl =
-      process.env["SUPABASE_URL"] ||
-      process.env["VITE_SUPABASE_URL"] ||
-      "https://amzcvuknjtpsrktkdhcf.supabase.co";
+    const { url: supabaseUrl, publishableKey } = getServerSupabaseConfig();
     const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-    const publishableKey =
-      process.env["SUPABASE_PUBLISHABLE_KEY"] ||
-      process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-      "sb_publishable_kUZnrUmMLb1lDBpNI9bBUg_lCaTDhXA";
 
     if (!serviceRoleKey) {
       throw new Error("Server service role key is not configured.");
@@ -58,7 +52,9 @@ export const deleteApplicationRecordServerFn = createServerFn({ method: "POST" }
     // Fetch target application details
     const { data: app, error: appError } = await adminClient
       .from("applications")
-      .select("id, application_number, campaign_id, applicant_id, application_documents(storage_path)")
+      .select(
+        "id, application_number, campaign_id, applicant_id, application_documents(storage_path)",
+      )
       .eq("id", data.applicationId)
       .single();
 

@@ -1,21 +1,22 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
-  AlertCircle,
   AlertTriangle,
   ArrowLeft,
-  CheckCircle2,
-  Download,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  ClipboardCheck,
   Eye,
-  FileCheck2,
   FileText,
   LoaderCircle,
   Mail,
   MessageSquare,
   NotebookPen,
   Phone,
+  Printer,
   Save,
-  ShieldAlert,
+  Square,
   Trash2,
   UserCheck,
 } from "lucide-react";
@@ -33,13 +34,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { STATUSES, formatDate, formatDateTime, fullName, type ApplicationStatus } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
 import { sendPlatformEmail } from "@/lib/email/platform-email";
@@ -64,6 +58,7 @@ function ApplicantProfile() {
   const application = applications.find((item) => item.id === applicationId);
 
   const [status, setStatus] = useState<ApplicationStatus>(application?.status ?? "Submitted");
+  const [statusMessage, setStatusMessage] = useState("");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [messagePriority, setMessagePriority] = useState<"normal" | "high">("normal");
@@ -71,8 +66,26 @@ function ApplicantProfile() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const [previewDoc, setPreviewDoc] = useState<{ name: string; url: string } | null>(null);
   const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+
+  // B1: Processing Checklist (session-only, resets on page load)
+  const [checklist, setChecklist] = useState({
+    biodata: false,
+    qualifications: false,
+    documents: false,
+    motivation: false,
+    decision: false,
+  });
+  const toggleCheck = (key: keyof typeof checklist) =>
+    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
+  const checklistProgress = Object.values(checklist).filter(Boolean).length;
+  const checklistTotal = Object.keys(checklist).length;
+
+  // B4: Collapsible dossier sections
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const toggleSection = useCallback((key: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   const refresh = async () => {
     const refreshed = await loadAdminApplications();
@@ -112,7 +125,11 @@ function ApplicantProfile() {
     }
   };
 
-  const handleOpenDoc = async (doc: { id: string; name: string; storagePath?: string | undefined }) => {
+  const handleOpenDoc = async (doc: {
+    id: string;
+    name: string;
+    storagePath?: string | undefined;
+  }) => {
     if (!doc.storagePath) return;
     setOpeningDocId(doc.id);
     try {
@@ -121,7 +138,7 @@ function ApplicantProfile() {
         window.open(url, "_blank", "noopener,noreferrer");
       }
     } catch {
-      // Handle error
+      setFeedback("The document could not be opened. Please try again.");
     } finally {
       setOpeningDocId(null);
     }
@@ -152,48 +169,95 @@ function ApplicantProfile() {
           Back to Applicant Directory
         </Link>
 
-        {/* Delete Record Trigger */}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 border-destructive/30 text-xs font-bold text-destructive hover:bg-destructive hover:text-white"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Delete Applicant
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" /> Permanently Delete Applicant Record?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2 text-left">
-                <p>
-                  You are about to permanently delete <strong>{fullName(application)}</strong> (
-                  <code>{application.appNumber}</code>).
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  This will remove all uploaded certificates, review notes, status history, and messages.
-                  The application code <strong>{application.appNumber}</strong> will be freed up in the database so subsequent applicants can register without gaps.
-                </p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={deleting}
-                onClick={(e) => {
-                  e.preventDefault();
-                  void handleDeleteApplication();
-                }}
+        {/* B3: Print Dossier */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs font-bold"
+            onClick={() => {
+              const printSection = document.getElementById("dossier-print-area");
+              if (!printSection) return;
+              const printWin = window.open("", "_blank");
+              if (!printWin) return;
+              printWin.document.write(`
+                <!DOCTYPE html>
+                <html><head>
+                  <title>${fullName(application)} — ${application.appNumber}</title>
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #111; font-size: 13px; }
+                    h1 { font-size: 20px; margin-bottom: 4px; }
+                    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; margin: 20px 0 8px; border-bottom: 2px solid #e5e5e5; padding-bottom: 4px; }
+                    dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+                    dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; }
+                    dd { font-weight: 600; margin-bottom: 4px; }
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+                    .header-left span { font-size: 11px; color: #888; }
+                    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; background: #e5e5e5; }
+                    .essay { background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 6px; white-space: pre-line; line-height: 1.6; }
+                    .doc-list { list-style: none; }
+                    .doc-list li { padding: 6px 0; border-bottom: 1px solid #eee; }
+                    .footer { margin-top: 24px; font-size: 10px; color: #999; text-align: center; }
+                    @media print { body { padding: 12px; } }
+                  </style>
+                </head><body>
+                  ${printSection.innerHTML}
+                  <div class="footer">The Free School Foundation — Printed ${new Date().toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}</div>
+                </body></html>
+              `);
+              printWin.document.close();
+              printWin.focus();
+              printWin.print();
+            }}
+          >
+            <Printer className="h-3.5 w-3.5" /> Print Dossier
+          </Button>
+
+          {/* Delete Record Trigger */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-destructive/30 text-xs font-bold text-destructive hover:bg-destructive hover:text-white"
               >
-                {deleting ? "Deleting Record…" : "Confirm Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <Trash2 className="h-3.5 w-3.5" /> Delete Applicant
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" /> Permanently Delete Applicant Record?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2 text-left">
+                  <p>
+                    You are about to permanently delete <strong>{fullName(application)}</strong> (
+                    <code>{application.appNumber}</code>).
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This will remove all uploaded certificates, review notes, status history, and
+                    messages. The application code <strong>{application.appNumber}</strong> will be
+                    freed up in the database so subsequent applicants can register without gaps.
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={deleting}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    void handleDeleteApplication();
+                  }}
+                >
+                  {deleting ? "Deleting Record…" : "Confirm Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {/* Header Profile Dossier Card */}
@@ -244,23 +308,54 @@ function ApplicantProfile() {
       {/* Main Scrutiny Layout */}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         {/* Left Column: Dossier Details */}
-        <div className="space-y-5">
+        <div className="space-y-5" id="dossier-print-area">
+          {/* Print-only header (visible only when printing) */}
+          <div className="hidden print:block">
+            <div className="header">
+              <div className="header-left">
+                <h1>{fullName(application)}</h1>
+                <span>
+                  {application.appNumber} • {application.programme} ({application.level})
+                </span>
+              </div>
+              <div className="badge">{application.status}</div>
+            </div>
+          </div>
+
           {/* Section 1: Application Programme & Award */}
-          <ProfileSection title="Application & Campaign Dossier">
+          <CollapsibleSection
+            title="Application & Campaign Dossier"
+            sectionKey="campaign"
+            collapsed={collapsedSections["campaign"]}
+            onToggle={toggleSection}
+          >
             <InfoGrid
               values={[
                 ["Programme Applied", application.programme],
-                ["Target Award Level", application.level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"],
+                [
+                  "Target Award Level",
+                  application.level === "ND"
+                    ? "National Diploma (ND)"
+                    : "Higher National Diploma (HND)",
+                ],
                 ["Partner Institution", "Citi Polytechnic ODeL Partnership"],
                 ["Scholarship Campaign", application.campaign],
                 ["Application Date", formatDate(application.submittedAt)],
-                ["Communication Consent", application.consentCommunication ? "Agreed & Opted In" : "Declined"],
+                [
+                  "Communication Consent",
+                  application.consentCommunication ? "Agreed & Opted In" : "Declined",
+                ],
               ]}
             />
-          </ProfileSection>
+          </CollapsibleSection>
 
           {/* Section 2: Personal Biodata Verification */}
-          <ProfileSection title="Personal Biodata & Residence">
+          <CollapsibleSection
+            title="Personal Biodata & Residence"
+            sectionKey="biodata"
+            collapsed={collapsedSections["biodata"]}
+            onToggle={toggleSection}
+          >
             <InfoGrid
               values={[
                 ["Full Legal Name", fullName(application)],
@@ -271,26 +366,41 @@ function ApplicantProfile() {
                 ["Contact Phone", application.personal.phone],
               ]}
             />
-          </ProfileSection>
+          </CollapsibleSection>
 
           {/* Section 3: Educational Background Scrutiny */}
-          <ProfileSection title="Academic Qualifications & Examination History">
+          <CollapsibleSection
+            title="Academic Qualifications & Examination History"
+            sectionKey="qualifications"
+            collapsed={collapsedSections["qualifications"]}
+            onToggle={toggleSection}
+          >
             <InfoGrid
               values={Object.entries(application.education).map(([key, value]) => [
-                key.replace(/([A-Z])/g, " $1"),
+                key
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (c) => c.toUpperCase())
+                  .trim(),
                 value ?? "—",
               ])}
             />
-          </ProfileSection>
+          </CollapsibleSection>
 
           {/* Section 4: Scholarship Essays */}
-          <ProfileSection title="Scholarship Motivation & Employment">
+          <CollapsibleSection
+            title="Scholarship Motivation & Employment"
+            sectionKey="motivation"
+            collapsed={collapsedSections["motivation"]}
+            onToggle={toggleSection}
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Employment Status
                 </dt>
-                <dd className="mt-1 text-sm font-bold">{application.scholarship.employmentStatus || "—"}</dd>
+                <dd className="mt-1 text-sm font-bold">
+                  {application.scholarship.employmentStatus || "—"}
+                </dd>
               </div>
               {application.scholarship.occupation && (
                 <div>
@@ -321,10 +431,15 @@ function ApplicantProfile() {
                 </p>
               </div>
             )}
-          </ProfileSection>
+          </CollapsibleSection>
 
           {/* Section 5: Documents Scrutiny Tray */}
-          <ProfileSection title={`Attached Supporting Documents (${application.documents.length})`}>
+          <CollapsibleSection
+            title={`Attached Supporting Documents (${application.documents.length})`}
+            sectionKey="documents"
+            collapsed={collapsedSections["documents"]}
+            onToggle={toggleSection}
+          >
             <div className="space-y-3">
               {application.documents.length === 0 && (
                 <p className="rounded-xl bg-secondary/40 p-4 text-xs text-muted-foreground">
@@ -344,7 +459,10 @@ function ApplicantProfile() {
                     <div className="min-w-0">
                       <p className="break-words text-sm font-bold text-foreground">{doc.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {doc.type} • {doc.uploaded ? `Uploaded ${formatDate(doc.uploadedAt)}` : "Awaiting Upload"}
+                        {doc.type} •{" "}
+                        {doc.uploaded
+                          ? `Uploaded ${formatDate(doc.uploadedAt)}`
+                          : "Awaiting Upload"}
                       </p>
                     </div>
                   </div>
@@ -380,16 +498,26 @@ function ApplicantProfile() {
                 </div>
               ))}
             </div>
-          </ProfileSection>
+          </CollapsibleSection>
 
           {/* Section 6: Status & Audit History */}
-          <ProfileSection title="Application Audit & Status History">
+          <CollapsibleSection
+            title="Application Audit & Status History"
+            sectionKey="history"
+            collapsed={collapsedSections["history"]}
+            onToggle={toggleSection}
+          >
             <ol className="space-y-3">
               {[...application.history].reverse().map((entry) => (
-                <li key={entry.id} className="rounded-xl border border-border/80 bg-secondary/20 p-3.5">
+                <li
+                  key={entry.id}
+                  className="rounded-xl border border-border/80 bg-secondary/20 p-3.5"
+                >
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-foreground">{entry.status}</p>
-                    <span className="text-[11px] text-muted-foreground">{formatDateTime(entry.at)}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatDateTime(entry.at)}
+                    </span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">Recorded by {entry.by}</p>
                   {entry.comment && (
@@ -400,11 +528,59 @@ function ApplicantProfile() {
                 </li>
               ))}
             </ol>
-          </ProfileSection>
+          </CollapsibleSection>
         </div>
 
         {/* Right Column: Administrative Review Actions */}
         <aside className="space-y-5">
+          {/* B1: Processing Checklist */}
+          <section className="rounded-2xl border border-border bg-card p-5 shadow-soft print:hidden">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <ClipboardCheck className="h-4 w-4 text-brand-green" /> Processing Checklist
+              </div>
+              <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">
+                {checklistProgress}/{checklistTotal}
+              </span>
+            </div>
+            <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-brand-green transition-all duration-300"
+                style={{ width: `${(checklistProgress / checklistTotal) * 100}%` }}
+              />
+            </div>
+            <ul className="mt-4 space-y-2">
+              {(
+                [
+                  ["biodata", "Reviewed personal biodata"],
+                  ["qualifications", "Verified academic qualifications"],
+                  ["documents", "Inspected all attached documents"],
+                  ["motivation", "Read scholarship motivation statement"],
+                  ["decision", "Made status decision"],
+                ] as const
+              ).map(([key, label]) => (
+                <li key={key}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-lg p-2 text-left text-xs transition-colors hover:bg-secondary/60"
+                    onClick={() => toggleCheck(key)}
+                  >
+                    {checklist[key] ? (
+                      <CheckSquare className="h-4 w-4 shrink-0 text-brand-green" />
+                    ) : (
+                      <Square className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <span
+                      className={`font-medium ${checklist[key] ? "text-muted-foreground line-through" : "text-foreground"}`}
+                    >
+                      {label}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           {/* Status Decision Box */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
             <div className="flex items-center gap-2 font-bold text-foreground">
@@ -422,20 +598,41 @@ function ApplicantProfile() {
                 ))}
               </select>
             </label>
+
+            {/* B2: Applicant-Facing Status Message */}
+            <div className="mt-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Message to Applicant (Optional)
+                <Textarea
+                  className="mt-2 text-xs normal-case tracking-normal"
+                  rows={2}
+                  placeholder="e.g. Your application has been shortlisted for interview…"
+                  value={statusMessage}
+                  onChange={(e) => setStatusMessage(e.target.value)}
+                />
+              </label>
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                This message will appear in the applicant's portal timeline.
+              </p>
+            </div>
+
             <Button
               className="mt-4 w-full font-bold"
               disabled={saving || status === application.status}
               onClick={() =>
                 void runAction(async () => {
-                  await changeApplicationStatus(application.id, status);
+                  await changeApplicationStatus(application.id, status, statusMessage || undefined);
                   try {
                     await sendPlatformEmail({
                       applicationIds: [application.id],
                       event: "status",
                     });
                   } catch {
+                    setStatusMessage("");
                     return "Status updated, but email notification failed. Retry from Communications.";
                   }
+                  setStatusMessage("");
+                  toggleCheck("decision");
                   return undefined;
                 }, "Application status updated and synced.")
               }
@@ -450,7 +647,9 @@ function ApplicantProfile() {
             <div className="flex items-center gap-2 font-bold text-foreground">
               <NotebookPen className="h-4 w-4 text-brand-orange" /> Internal Staff Notes
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">Confidential and never visible to the applicant.</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Confidential and never visible to the applicant.
+            </p>
             <Textarea
               className="mt-3 text-xs"
               rows={3}
@@ -575,7 +774,17 @@ function ApplicantProfile() {
           </section>
 
           {feedback && (
-            <p role="status" className="rounded-xl border border-brand-green/30 bg-brand-green-soft p-4 text-xs font-bold text-brand-green-dark">
+            <p
+              role="status"
+              className={`rounded-xl border p-4 text-xs font-bold ${
+                feedback.toLowerCase().includes("failed") ||
+                feedback.toLowerCase().includes("could not") ||
+                feedback.toLowerCase().includes("error") ||
+                feedback.toLowerCase().includes("not allowed")
+                  ? "border-destructive/30 bg-destructive/10 text-destructive"
+                  : "border-brand-green/30 bg-brand-green-soft text-brand-green-dark"
+              }`}
+            >
               {feedback}
             </p>
           )}
@@ -590,6 +799,40 @@ function ProfileSection({ title, children }: { title: string; children: React.Re
     <section className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-soft">
       <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-brand-orange">{title}</h2>
       {children}
+    </section>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  sectionKey,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  title: string;
+  sectionKey: string;
+  collapsed?: boolean;
+  onToggle: (key: string) => void;
+  children: React.ReactNode;
+}) {
+  const isCollapsed = collapsed ?? false;
+  return (
+    <section className="rounded-2xl border border-border bg-card shadow-soft overflow-hidden">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between p-5 md:p-6 text-left"
+        onClick={() => onToggle(sectionKey)}
+        aria-expanded={!isCollapsed}
+      >
+        <h2 className="text-sm font-bold uppercase tracking-wider text-brand-orange">{title}</h2>
+        {isCollapsed ? (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+      </button>
+      {!isCollapsed && <div className="px-5 pb-5 md:px-6 md:pb-6">{children}</div>}
     </section>
   );
 }

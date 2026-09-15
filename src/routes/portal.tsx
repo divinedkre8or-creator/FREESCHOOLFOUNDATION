@@ -25,7 +25,13 @@ import {
 import { PortalLayout, type PortalSection } from "@/components/portal/PortalLayout";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatDateTime, fullName, STATUS_COPY, type ApplicationStatus } from "@/lib/fsf";
+import {
+  formatDate,
+  formatDateTime,
+  fullName,
+  STATUS_COPY,
+  type ApplicationStatus,
+} from "@/lib/fsf";
 import { useCurrentApplication, useStore } from "@/lib/store";
 import {
   getDocumentUrl,
@@ -39,7 +45,8 @@ export const Route = createFileRoute("/portal")({
   head: () =>
     seoHead({
       title: "Admission Portal | The Free School Foundation",
-      description: "Private scholarship admission status, official records, documents, and messages.",
+      description:
+        "Private scholarship admission status, official records, documents, and messages.",
       path: "/portal",
       noIndex: true,
     }),
@@ -52,9 +59,17 @@ const PIPELINE_STAGES: Array<{
   matches: ApplicationStatus[];
 }> = [
   { key: "submitted", label: "Application Submitted", matches: ["Submitted"] },
-  { key: "review", label: "Under Review", matches: ["Under Review", "Additional Documents Required"] },
+  {
+    key: "review",
+    label: "Under Review",
+    matches: ["Under Review", "Additional Documents Required"],
+  },
   { key: "shortlist", label: "Shortlisted", matches: ["Shortlisted"] },
-  { key: "decision", label: "Enrolment & Admission", matches: ["Approved", "Enrolled", "Not Successful"] },
+  {
+    key: "decision",
+    label: "Enrolment & Admission",
+    matches: ["Approved", "Enrolled", "Not Successful"],
+  },
 ];
 
 function getStageIndex(status: ApplicationStatus): number {
@@ -123,7 +138,11 @@ function PortalPage() {
     }
   };
 
-  const handleViewDocument = async (doc: { id: string; name: string; storagePath?: string | undefined }) => {
+  const handleViewDocument = async (doc: {
+    id: string;
+    name: string;
+    storagePath?: string | undefined;
+  }) => {
     if (!doc.storagePath) return;
     setLoadingDocId(doc.id);
     try {
@@ -155,7 +174,8 @@ function PortalPage() {
           <Shield className="mx-auto h-10 w-10 text-brand-green" />
           <h1 className="mt-4 text-2xl font-extrabold">Sign In to Your Portal</h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            Access to your official admission and scholarship records requires authenticated sign-in.
+            Access to your official admission and scholarship records requires authenticated
+            sign-in.
           </p>
           <Button asChild className="mt-6 w-full" size="lg">
             <Link to="/login">Sign In with Applicant Account</Link>
@@ -205,7 +225,10 @@ function PortalPage() {
                     Welcome, {application.personal.firstName}
                   </h1>
                   <p className="mt-1 text-xs text-emerald-100 sm:text-sm">
-                    {application.programme} • {application.level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"}
+                    {application.programme} •{" "}
+                    {application.level === "ND"
+                      ? "National Diploma (ND)"
+                      : "Higher National Diploma (HND)"}
                   </p>
                 </div>
 
@@ -224,7 +247,11 @@ function PortalPage() {
                       title="Copy application number"
                       aria-label="Copy application number"
                     >
-                      {copiedCode ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedCode ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-300" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -287,7 +314,9 @@ function PortalPage() {
                 <span className="inline-block rounded bg-red-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
                   High Priority Foundation Dispatch
                 </span>
-                <p className="mt-1 font-bold text-red-900 dark:text-red-200">{urgentMessage.subject}</p>
+                <p className="mt-1 font-bold text-red-900 dark:text-red-200">
+                  {urgentMessage.subject}
+                </p>
                 <p className="mt-0.5 text-xs text-red-800/80 dark:text-red-300">
                   Tap to view the official update from the admissions team.
                 </p>
@@ -361,7 +390,8 @@ function PortalPage() {
                     className="w-full justify-start text-xs font-semibold"
                     onClick={() => setSection("documents")}
                   >
-                    <FileCheck className="mr-2 h-3.5 w-3.5 text-brand-green" /> Document Registry ({application.documents.length})
+                    <FileCheck className="mr-2 h-3.5 w-3.5 text-brand-green" /> Document Registry (
+                    {application.documents.length})
                   </Button>
                   <Button
                     variant="outline"
@@ -432,7 +462,11 @@ function PortalPage() {
                 <Info label="Chosen Programme" value={application.programme} />
                 <Info
                   label="Target Award Level"
-                  value={application.level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"}
+                  value={
+                    application.level === "ND"
+                      ? "National Diploma (ND)"
+                      : "Higher National Diploma (HND)"
+                  }
                 />
                 <Info label="Education Partner" value="Citi Polytechnic ODeL Partnership" />
                 <Info label="Scholarship Campaign" value={application.campaign} />
@@ -445,11 +479,7 @@ function PortalPage() {
               </h2>
               <div className="mt-3 grid gap-4 rounded-xl border border-border bg-secondary/20 p-4 sm:grid-cols-2">
                 {Object.entries(application.education).map(([key, value]) => (
-                  <Info
-                    key={key}
-                    label={key.replace(/([A-Z])/g, " $1")}
-                    value={value || "—"}
-                  />
+                  <Info key={key} label={key.replace(/([A-Z])/g, " $1")} value={value || "—"} />
                 ))}
               </div>
             </div>
@@ -467,7 +497,9 @@ function PortalPage() {
                 </div>
                 {application.scholarship.goals && (
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground">Career & Educational Goals</p>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Career & Educational Goals
+                    </p>
                     <p className="mt-1 text-sm leading-relaxed text-foreground">
                       {application.scholarship.goals}
                     </p>
@@ -504,7 +536,10 @@ function PortalPage() {
                   <div className="min-w-0">
                     <p className="break-words text-sm font-bold text-foreground">{doc.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {doc.type} • {doc.uploaded ? `Uploaded ${formatDate(doc.uploadedAt)}` : "Requested by Committee"}
+                      {doc.type} •{" "}
+                      {doc.uploaded
+                        ? `Uploaded ${formatDate(doc.uploadedAt)}`
+                        : "Requested by Committee"}
                     </p>
                   </div>
                 </div>
@@ -569,7 +604,9 @@ function PortalPage() {
               <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
                 <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/60" />
                 <p className="mt-3 text-sm font-semibold">No messages yet</p>
-                <p className="mt-1 text-xs">Updates will appear here as your application is processed.</p>
+                <p className="mt-1 text-xs">
+                  Updates will appear here as your application is processed.
+                </p>
               </div>
             )}
 
@@ -689,7 +726,9 @@ function Panel({
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-1 text-sm font-bold text-foreground break-words">{value || "—"}</p>
     </div>
   );
