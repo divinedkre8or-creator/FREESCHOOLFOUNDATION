@@ -2,8 +2,8 @@
   "name": "The Free School Foundation Scholarship Portal",
   "short_name": "FSF Portal",
   "description": "Apply for and track The Free School Foundation scholarships.",
-  "id": "/portal",
-  "start_url": "/portal",
+  "id": "/",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -12,9 +12,14 @@
   "categories": ["education"],
   "shortcuts": [
     {
-      "name": "My application",
+      "name": "My Application",
       "short_name": "Application",
       "url": "/portal"
+    },
+    {
+      "name": "Admin Dashboard",
+      "short_name": "Admin",
+      "url": "/admin"
     }
   ],
   "icons": [

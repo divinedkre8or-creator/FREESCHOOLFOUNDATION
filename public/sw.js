@@ -1,5 +1,13 @@
-const CACHE_VERSION = "fsf-shell-v1";
-const SHELL_ASSETS = ["/", "/favicon.png", "/app-icon.svg", "/manifest.webmanifest"];
+const CACHE_VERSION = "fsf-shell-v2";
+const SHELL_ASSETS = [
+  "/",
+  "/favicon.png",
+  "/apple-touch-icon.png",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/app-icon.svg",
+  "/manifest.webmanifest",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL_ASSETS)));

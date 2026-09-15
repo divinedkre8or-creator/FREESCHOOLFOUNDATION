@@ -4,6 +4,7 @@ import { Menu, Phone, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { CONTACT } from "@/lib/fsf";
+import { InstallAppLine } from "@/components/site/InstallAppLine";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -154,6 +155,7 @@ function Footer() {
 export function SiteLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <InstallAppLine />
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
