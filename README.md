@@ -4,7 +4,7 @@ PROJECT: THE FREE SCHOOL FOUNDATION SCHOLARSHIP PORTAL
 
 Build a complete, production-quality scholarship website and applicant management portal for The Free School Foundation.
 
-The platform is being launched initially for The Free School Foundation's partnership with Citi Polytechnic Abuja, providing 100% scholarship opportunities for ND and HND applicants through Citi Polytechnic's Open Distance e-Learning Programme in Aba, Abia State.
+The platform is being launched initially for The Free School Foundation's partnership with Citi Polytechnic Abuja, providing 100% scholarship opportunities for ND and HND applicants through the Open Distance Learning (ODL) Programme in Aba, Abia State.
 
 This must not feel like a generic school management template.
 
@@ -80,7 +80,7 @@ GET YOUR ND AND HND
 
 100% FREE
 
-Study from Aba through Citi Polytechnic's Open Distance e-Learning Programme.
+Study from Aba through the Open Distance Learning (ODL) Programme, fully funded by The Free School Foundation.
 
 Position it as a fully funded education opportunity for people ready to advance their education and career.
 
@@ -138,7 +138,7 @@ GET YOUR ND OR HND
 
 100% FREE
 
-Study from Aba through Citi Polytechnic's Open Distance e-Learning Programme.
+Study from Aba through the Open Distance Learning (ODL) Programme, fully funded by The Free School Foundation.
 
 Primary CTA:
 

@@ -4,7 +4,7 @@
 
 The Free School Gateway is the central scholarship platform for The Free School Foundation. It helps people discover and apply for opportunities, gives applicants a clear view of their progress, and gives authorized Foundation staff one operational system for review, communication, decisions, and enrolment.
 
-The first campaign is a 100% funded ND/HND opportunity delivered with Citi Polytechnic through Open Distance e-Learning. The platform must remain campaign-neutral enough to support future university, certification, digital-skills, vocational, and partner programmes.
+The first campaign is a 100% funded ND/HND opportunity delivered with Citi Polytechnic through Open Distance Learning (ODL). The platform must remain campaign-neutral enough to support future university, certification, digital-skills, vocational, and partner programmes.
 
 Primary product promise: applying should feel simple and transparent; administering the programme should feel controlled and traceable.
 

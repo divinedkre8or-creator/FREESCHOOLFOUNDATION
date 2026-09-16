@@ -89,8 +89,8 @@ function Home() {
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             The Free School Foundation pays your tuition so that money is never the reason you stop
-            learning. Study with flexible pacing supported by physical orientation and Foundation
-            guidance in Aba.
+            learning. Study through a structured Open Distance Learning programme with physical
+            orientation and Foundation guidance in Aba.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -107,7 +107,7 @@ function Home() {
               {
                 icon: MapPin,
                 title: "Study from Aba",
-                body: "Open Distance Learning allows flexible study from Aba with dedicated local support.",
+                body: "Attend through Open Distance Learning (ODL) with physical orientation and dedicated local support in Aba.",
               },
               {
                 icon: ShieldCheck,

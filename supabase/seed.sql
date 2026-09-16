@@ -23,8 +23,8 @@ insert into public.campaigns (
 )
 values (
   '20000000-0000-0000-0000-000000000001',
-  'citi-polytechnic-odel-2026',
-  'Citi Polytechnic ODeL Scholarship 2026',
+  'citi-polytechnic-odl-2026',
+  'Citi Polytechnic ODL Scholarship 2026',
   'Citi Polytechnic Abuja',
   'A 100% funded ND and HND opportunity from The Free School Foundation.',
   '2026-08-01T00:00:00+01:00',
