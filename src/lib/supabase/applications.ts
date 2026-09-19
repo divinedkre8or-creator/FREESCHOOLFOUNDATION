@@ -227,6 +227,20 @@ export type RegisteredUser = {
 
 export async function loadRegisteredUsers(): Promise<RegisteredUser[]> {
   const supabase = getSupabaseBrowserClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (token) {
+    try {
+      const { getRegisteredUsersServerFn } = await import("@/lib/admin/admin-actions");
+      const users = await getRegisteredUsersServerFn({ data: { accessToken: token } });
+      if (users && users.length > 0) {
+        return users;
+      }
+    } catch (err) {
+      console.warn("getRegisteredUsersServerFn failed, trying fallback:", err);
+    }
+  }
+
   const { data, error } = await supabase.rpc("list_registered_users");
   if (error) {
     console.warn("list_registered_users RPC not found or returned error, falling back:", error);
@@ -276,7 +290,22 @@ export async function loadRegisteredUsers(): Promise<RegisteredUser[]> {
 }
 
 export async function loadAdminApplications(): Promise<Application[]> {
-  const { data, error } = await getSupabaseBrowserClient()
+  const supabase = getSupabaseBrowserClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (token) {
+    try {
+      const { getAdminApplicationsServerFn } = await import("@/lib/admin/admin-actions");
+      const rows = await getAdminApplicationsServerFn({ data: { accessToken: token } });
+      if (rows && rows.length > 0) {
+        return (rows as unknown as ApplicationRow[]).map(mapApplication);
+      }
+    } catch (err) {
+      console.warn("getAdminApplicationsServerFn failed, trying client fallback:", err);
+    }
+  }
+
+  const { data, error } = await supabase
     .from("applications")
     .select(APPLICATION_SELECT)
     .order("created_at", { ascending: false });
@@ -298,14 +327,21 @@ export async function sendPortalMessage(input: {
   body: string;
   priority: "normal" | "high";
 }): Promise<number> {
-  const { data, error } = await getSupabaseBrowserClient().rpc("send_portal_message", {
-    target_application_ids: input.applicationIds,
-    message_subject: input.subject,
-    message_body: input.body,
-    message_priority: input.priority,
-  });
-  if (error) throw new Error("The portal message could not be sent.");
-  return Number(data ?? 0);
+  try {
+    const { adminDispatchPortalMessage } = await import("@/lib/admin/admin-actions");
+    const res = await adminDispatchPortalMessage(input);
+    return res.count;
+  } catch (serverErr) {
+    console.warn("Server dispatch failed, attempting RPC fallback:", serverErr);
+    const { data, error } = await getSupabaseBrowserClient().rpc("send_portal_message", {
+      target_application_ids: input.applicationIds,
+      message_subject: input.subject,
+      message_body: input.body,
+      message_priority: input.priority,
+    });
+    if (error) throw new Error("The portal message could not be sent: " + error.message);
+    return Number(data ?? 0);
+  }
 }
 
 const STATUS_TO_DB: Record<ApplicationStatus, string> = {
@@ -324,32 +360,50 @@ export async function changeApplicationStatus(
   status: ApplicationStatus,
   applicantMessage?: string,
 ): Promise<void> {
-  const { error } = await getSupabaseBrowserClient().rpc("change_application_status", {
-    target_application_id: applicationId,
-    target_status: STATUS_TO_DB[status],
-    applicant_message: applicantMessage ?? null,
-    internal_reason: null,
-  });
-  if (error) throw new Error("The status change was not allowed or could not be saved.");
+  try {
+    const { adminUpdateApplicationStatus } = await import("@/lib/admin/admin-actions");
+    await adminUpdateApplicationStatus(applicationId, STATUS_TO_DB[status], applicantMessage);
+  } catch (serverErr) {
+    console.warn("Server status update failed, attempting RPC fallback:", serverErr);
+    const { error } = await getSupabaseBrowserClient().rpc("change_application_status", {
+      target_application_id: applicationId,
+      target_status: STATUS_TO_DB[status],
+      applicant_message: applicantMessage ?? null,
+      internal_reason: null,
+    });
+    if (error) throw new Error("The status change was not allowed or could not be saved: " + error.message);
+  }
 }
 
 export async function addApplicationNote(applicationId: string, body: string): Promise<void> {
-  const { error } = await getSupabaseBrowserClient().rpc("add_application_note", {
-    target_application_id: applicationId,
-    note_body: body,
-  });
-  if (error) throw new Error("The private note could not be saved.");
+  try {
+    const { adminAddApplicationNote } = await import("@/lib/admin/admin-actions");
+    await adminAddApplicationNote(applicationId, body);
+  } catch (serverErr) {
+    console.warn("Server add note failed, attempting RPC fallback:", serverErr);
+    const { error } = await getSupabaseBrowserClient().rpc("add_application_note", {
+      target_application_id: applicationId,
+      note_body: body,
+    });
+    if (error) throw new Error("The private note could not be saved: " + error.message);
+  }
 }
 
 export async function requestApplicationDocument(
   applicationId: string,
   documentType: string,
 ): Promise<void> {
-  const { error } = await getSupabaseBrowserClient().rpc("request_application_document", {
-    target_application_id: applicationId,
-    requested_document_type: documentType,
-  });
-  if (error) throw new Error("The document request could not be saved.");
+  try {
+    const { adminRequestApplicationDocument } = await import("@/lib/admin/admin-actions");
+    await adminRequestApplicationDocument(applicationId, documentType);
+  } catch (serverErr) {
+    console.warn("Server request doc failed, attempting RPC fallback:", serverErr);
+    const { error } = await getSupabaseBrowserClient().rpc("request_application_document", {
+      target_application_id: applicationId,
+      requested_document_type: documentType,
+    });
+    if (error) throw new Error("The document request could not be saved: " + error.message);
+  }
 }
 
 export async function uploadRequestedDocument(input: {

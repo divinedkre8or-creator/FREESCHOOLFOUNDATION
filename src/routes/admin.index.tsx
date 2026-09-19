@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -7,24 +7,31 @@ import {
   FileWarning,
   GraduationCap,
   RotateCcw,
+  UserCheck2,
   Users,
 } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { fullName, STATUSES } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
-import { loadAdminApplications } from "@/lib/supabase/applications";
+import { loadAdminApplications, loadRegisteredUsers } from "@/lib/supabase/applications";
 
 export const Route = createFileRoute("/admin/")({ component: AdminDashboard });
+
 function AdminDashboard() {
   const { applications, setState } = useStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [registeredCount, setRegisteredCount] = useState<number>(0);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const refreshed = await loadAdminApplications();
+      const [refreshed, users] = await Promise.all([
+        loadAdminApplications(),
+        loadRegisteredUsers(),
+      ]);
       setState((state) => ({ ...state, applications: refreshed }));
+      setRegisteredCount(users.length);
     } catch (err) {
       console.error("Refresh failed:", err);
     } finally {
@@ -32,30 +39,45 @@ function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+    void handleRefresh();
+  }, []);
+
   const stats = [
     {
-      label: "Total applications",
-      value: applications.length,
+      label: "Registered accounts",
+      value: registeredCount || applications.length,
       icon: Users,
+      tone: "text-brand-orange",
+      link: "/admin/applicants",
+    },
+    {
+      label: "Submitted applications",
+      value: applications.filter((a) => a.status !== "Draft").length,
+      icon: UserCheck2,
       tone: "text-brand-green",
+      link: "/admin/applicants",
     },
     {
       label: "Under review",
       value: applications.filter((a) => a.status === "Under Review").length,
       icon: Clock3,
       tone: "text-info",
+      link: "/admin/applicants",
     },
     {
-      label: "Require action",
+      label: "Require documents",
       value: applications.filter((a) => a.status === "Additional Documents Required").length,
       icon: FileWarning,
-      tone: "text-brand-orange",
+      tone: "text-warning",
+      link: "/admin/applicants",
     },
     {
-      label: "Approved",
+      label: "Approved & Enrolled",
       value: applications.filter((a) => a.status === "Approved" || a.status === "Enrolled").length,
       icon: CheckCircle2,
       tone: "text-brand-green-dark",
+      link: "/admin/applicants",
     },
   ];
   return (
@@ -85,7 +107,7 @@ function AdminDashboard() {
           </Button>
         </div>
       </div>
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map((stat) => (
           <section key={stat.label} className="rounded-2xl border border-border bg-card p-5">
             <stat.icon className={`h-5 w-5 ${stat.tone}`} />

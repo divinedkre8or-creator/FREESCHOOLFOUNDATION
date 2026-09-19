@@ -3,11 +3,15 @@ import { useCallback, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  Check,
+  CheckCircle2,
   CheckSquare,
   ChevronDown,
   ChevronUp,
   ClipboardCheck,
+  Clock,
   Eye,
+  FileCheck2,
   FileText,
   LoaderCircle,
   Mail,
@@ -15,10 +19,15 @@ import {
   NotebookPen,
   Phone,
   Printer,
+  RotateCcw,
   Save,
+  ShieldAlert,
+  ShieldCheck,
   Square,
   Trash2,
   UserCheck,
+  X,
+  XCircle,
 } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +54,10 @@ import {
   requestApplicationDocument,
   sendPortalMessage,
 } from "@/lib/supabase/applications";
-import { deleteApplicationRecord } from "@/lib/admin/admin-actions";
+import {
+  adminUpdateDocumentStatus,
+  deleteApplicationRecord,
+} from "@/lib/admin/admin-actions";
 
 export const Route = createFileRoute("/admin/applicants/$applicationId")({
   component: ApplicantProfile,
@@ -67,6 +79,7 @@ function ApplicantProfile() {
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+  const [updatingDocId, setUpdatingDocId] = useState<string | null>(null);
 
   // B1: Processing Checklist (session-only, resets on page load)
   const [checklist, setChecklist] = useState({
@@ -103,6 +116,32 @@ function ApplicantProfile() {
       setFeedback(error instanceof Error ? error.message : "The action could not be completed.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdateDocumentStatus = async (
+    docId: string,
+    scanStatus: "clean" | "rejected" | "pending",
+    docName: string,
+  ) => {
+    if (!application) return;
+    setUpdatingDocId(docId);
+    setFeedback("");
+    try {
+      await adminUpdateDocumentStatus(application.id, docId, scanStatus);
+      await refresh();
+      setFeedback(
+        scanStatus === "clean"
+          ? `Document "${docName}" scrutinized and verified clean.`
+          : scanStatus === "rejected"
+            ? `Document "${docName}" marked as rejected / ineligible.`
+            : `Document "${docName}" reset to pending scrutiny.`,
+      );
+      toggleCheck("documents");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Failed to update document status.");
+    } finally {
+      setUpdatingDocId(null);
     }
   };
 
@@ -169,7 +208,7 @@ function ApplicantProfile() {
           Back to Applicant Directory
         </Link>
 
-        {/* B3: Print Dossier */}
+        {/* B3: Print Dossier & Actions */}
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -309,7 +348,7 @@ function ApplicantProfile() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         {/* Left Column: Dossier Details */}
         <div className="space-y-5" id="dossier-print-area">
-          {/* Print-only header (visible only when printing) */}
+          {/* Print-only header */}
           <div className="hidden print:block">
             <div className="header">
               <div className="header-left">
@@ -433,14 +472,14 @@ function ApplicantProfile() {
             )}
           </CollapsibleSection>
 
-          {/* Section 5: Documents Scrutiny Tray */}
+          {/* Section 5: Documents Scrutiny & Verification Tray */}
           <CollapsibleSection
             title={`Attached Supporting Documents (${application.documents.length})`}
             sectionKey="documents"
             collapsed={collapsedSections["documents"]}
             onToggle={toggleSection}
           >
-            <div className="space-y-3">
+            <div className="space-y-4">
               {application.documents.length === 0 && (
                 <p className="rounded-xl bg-secondary/40 p-4 text-xs text-muted-foreground">
                   No certificates or documents attached to this record.
@@ -450,50 +489,123 @@ function ApplicantProfile() {
               {application.documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex flex-col items-stretch justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-all sm:flex-row sm:items-center"
+                  className="flex flex-col items-stretch justify-between gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-brand-green/40 shadow-xs"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-green-soft text-brand-green-dark">
-                      <FileText className="h-5 w-5" />
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-green-soft text-brand-green-dark">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-bold text-foreground">{doc.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {doc.type} •{" "}
+                          {doc.uploaded
+                            ? `Uploaded ${formatDate(doc.uploadedAt)}`
+                            : "Awaiting Upload"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="break-words text-sm font-bold text-foreground">{doc.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {doc.type} •{" "}
-                        {doc.uploaded
-                          ? `Uploaded ${formatDate(doc.uploadedAt)}`
-                          : "Awaiting Upload"}
-                      </p>
-                    </div>
+
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                        doc.scanStatus === "clean"
+                          ? "bg-brand-green-soft text-brand-green-dark border border-brand-green/30"
+                          : doc.scanStatus === "rejected"
+                            ? "bg-destructive/10 text-destructive border border-destructive/30"
+                            : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {doc.scanStatus === "clean" ? (
+                        <>
+                          <ShieldCheck className="h-3.5 w-3.5 text-brand-green" /> Verified Clean
+                        </>
+                      ) : doc.scanStatus === "rejected" ? (
+                        <>
+                          <ShieldAlert className="h-3.5 w-3.5 text-destructive" /> Rejected / Ineligible
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="h-3.5 w-3.5" /> Pending Scrutiny
+                        </>
+                      )}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                      {doc.scanStatus === "clean"
-                        ? "Verified Clean"
-                        : doc.scanStatus === "rejected"
-                          ? "Rejected"
-                          : doc.uploaded
-                            ? "Stored Securely"
-                            : "Pending"}
-                    </span>
+                  {/* Scrutiny & Verification Action Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+                    <div className="flex items-center gap-2">
+                      {doc.storagePath && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={openingDocId === doc.id}
+                          onClick={() => void handleOpenDoc(doc)}
+                          className="h-8 gap-1 text-xs font-bold text-brand-green-dark hover:bg-brand-green-soft"
+                        >
+                          {openingDocId === doc.id ? (
+                            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                          View Certificate
+                        </Button>
+                      )}
+                    </div>
 
-                    {doc.storagePath && (
+                    {/* Scrutiny Decision Buttons */}
+                    <div className="flex items-center gap-1.5">
                       <Button
-                        variant="outline"
+                        variant={doc.scanStatus === "clean" ? "default" : "outline"}
                         size="sm"
-                        disabled={openingDocId === doc.id}
-                        onClick={() => void handleOpenDoc(doc)}
-                        className="h-8 gap-1 text-xs font-bold text-brand-green-dark hover:bg-brand-green-soft"
+                        disabled={updatingDocId === doc.id}
+                        onClick={() => void handleUpdateDocumentStatus(doc.id, "clean", doc.name)}
+                        className={`h-8 gap-1 text-xs font-bold ${
+                          doc.scanStatus === "clean"
+                            ? "bg-brand-green text-white hover:bg-brand-green-dark"
+                            : "text-brand-green-dark hover:bg-brand-green-soft"
+                        }`}
                       >
-                        {openingDocId === doc.id ? (
-                          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        {updatingDocId === doc.id ? (
+                          <LoaderCircle className="h-3 w-3 animate-spin" />
                         ) : (
-                          <Eye className="h-3.5 w-3.5" />
+                          <Check className="h-3.5 w-3.5" />
                         )}
-                        View Document
+                        Verify Clean
                       </Button>
-                    )}
+
+                      <Button
+                        variant={doc.scanStatus === "rejected" ? "destructive" : "outline"}
+                        size="sm"
+                        disabled={updatingDocId === doc.id}
+                        onClick={() => void handleUpdateDocumentStatus(doc.id, "rejected", doc.name)}
+                        className={`h-8 gap-1 text-xs font-bold ${
+                          doc.scanStatus === "rejected"
+                            ? "bg-destructive text-white"
+                            : "text-destructive hover:bg-destructive/10 border-destructive/30"
+                        }`}
+                      >
+                        {updatingDocId === doc.id ? (
+                          <LoaderCircle className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3.5 w-3.5" />
+                        )}
+                        Flag / Reject
+                      </Button>
+
+                      {doc.scanStatus && doc.scanStatus !== "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={updatingDocId === doc.id}
+                          onClick={() => void handleUpdateDocumentStatus(doc.id, "pending", doc.name)}
+                          className="h-8 text-[11px] text-muted-foreground hover:text-foreground"
+                          title="Reset to Pending"
+                        >
+                          Reset
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -583,13 +695,87 @@ function ApplicantProfile() {
 
           {/* Status Decision Box */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-            <div className="flex items-center gap-2 font-bold text-foreground">
-              <UserCheck className="h-4 w-4 text-brand-green" /> Review Decision
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <UserCheck className="h-4 w-4 text-brand-green" /> Review Decision
+              </div>
+              <span className="text-[11px] font-bold text-brand-orange">
+                Current: {application.status}
+              </span>
             </div>
+
+            {/* Quick Decision Presets */}
+            <div className="mt-3 space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Quick Placement Presets
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("Approved");
+                    setStatusMessage("Congratulations! Your scholarship application has been APPROVED for Citi Polytechnic ODL 2026. Next onboarding steps will follow.");
+                  }}
+                  className={`rounded-lg border px-2.5 py-1.5 text-left text-[11px] font-bold transition-all ${
+                    status === "Approved"
+                      ? "border-brand-green bg-brand-green-soft text-brand-green-dark shadow-xs"
+                      : "border-border hover:bg-secondary/60 text-foreground"
+                  }`}
+                >
+                  ✓ Approve
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("Shortlisted");
+                    setStatusMessage("Your application has been shortlisted for final committee review.");
+                  }}
+                  className={`rounded-lg border px-2.5 py-1.5 text-left text-[11px] font-bold transition-all ${
+                    status === "Shortlisted"
+                      ? "border-brand-orange bg-brand-orange-soft text-brand-orange shadow-xs"
+                      : "border-border hover:bg-secondary/60 text-foreground"
+                  }`}
+                >
+                  ★ Shortlist
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("Under Review");
+                    setStatusMessage("Your application and academic documents are undergoing formal scrutiny.");
+                  }}
+                  className={`rounded-lg border px-2.5 py-1.5 text-left text-[11px] font-bold transition-all ${
+                    status === "Under Review"
+                      ? "border-info bg-info/10 text-info shadow-xs"
+                      : "border-border hover:bg-secondary/60 text-foreground"
+                  }`}
+                >
+                  ⏳ Under Review
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("Additional Documents Required");
+                    setStatusMessage("We require additional or clearer supporting documents to finalize our review. Please upload them below.");
+                  }}
+                  className={`rounded-lg border px-2.5 py-1.5 text-left text-[11px] font-bold transition-all ${
+                    status === "Additional Documents Required"
+                      ? "border-warning bg-warning/10 text-warning shadow-xs"
+                      : "border-border hover:bg-secondary/60 text-foreground"
+                  }`}
+                >
+                  ⚠ Request Docs
+                </button>
+              </div>
+            </div>
+
             <label className="mt-4 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Assign Status
+              Or Select Any Status
               <select
-                className="mt-2 h-11 w-full rounded-lg border border-input bg-background px-3 text-xs font-semibold text-foreground normal-case tracking-normal"
+                className="mt-1.5 h-10 w-full rounded-lg border border-input bg-background px-3 text-xs font-semibold text-foreground normal-case tracking-normal"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as ApplicationStatus)}
               >
@@ -600,25 +786,25 @@ function ApplicantProfile() {
             </label>
 
             {/* B2: Applicant-Facing Status Message */}
-            <div className="mt-4">
+            <div className="mt-3">
               <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Message to Applicant (Optional)
+                Message to Candidate (Optional)
                 <Textarea
-                  className="mt-2 text-xs normal-case tracking-normal"
+                  className="mt-1.5 text-xs normal-case tracking-normal"
                   rows={2}
-                  placeholder="e.g. Your application has been shortlisted for interview…"
+                  placeholder="e.g. Your application has been approved for scholarship award…"
                   value={statusMessage}
                   onChange={(e) => setStatusMessage(e.target.value)}
                 />
               </label>
-              <p className="mt-1.5 text-[10px] text-muted-foreground">
-                This message will appear in the applicant's portal timeline.
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                This message will appear in candidate's portal timeline.
               </p>
             </div>
 
             <Button
               className="mt-4 w-full font-bold"
-              disabled={saving || status === application.status}
+              disabled={saving || (status === application.status && !statusMessage.trim())}
               onClick={() =>
                 void runAction(async () => {
                   await changeApplicationStatus(application.id, status, statusMessage || undefined);
@@ -637,8 +823,12 @@ function ApplicantProfile() {
                 }, "Application status updated and synced.")
               }
             >
-              <Save className="mr-2 h-4 w-4" />
-              Update Status
+              {saving ? (
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Review Decision
             </Button>
           </section>
 
