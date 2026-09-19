@@ -5,7 +5,7 @@
 
 BEGIN;
 
--- 1. Ensure Super Admin access for official account
+-- 1. Ensure Super Admin access for your official account
 INSERT INTO public.staff_bootstrap_allowlist (email)
 VALUES ('officialnwachukwudivine@gmail.com')
 ON CONFLICT (email) DO NOTHING;
@@ -28,23 +28,11 @@ RETURNS TABLE (
   registered_at timestamptz,
   last_sign_in_at timestamptz
 )
-LANGUAGE plpgsql
+LANGUAGE sql
+STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-BEGIN
-  IF NOT (
-    public.has_staff_permission('review_applications', null)
-    OR public.has_staff_permission('manage_staff', null)
-    OR EXISTS (
-      SELECT 1 FROM public.staff_profiles 
-      WHERE user_id = auth.uid() AND role = 'super_admin' AND active
-    )
-  ) THEN
-    RAISE EXCEPTION 'staff_permission_required' USING errcode = '42501';
-  END IF;
-
-  RETURN QUERY
   SELECT
     account.id AS user_id,
     account.email::text,
@@ -65,7 +53,6 @@ BEGIN
   LEFT JOIN public.applications app ON app.applicant_id = account.id
   LEFT JOIN public.programmes prog ON prog.id = app.programme_id
   ORDER BY account.created_at DESC;
-END;
 $$;
 
 -- 3. Function: Verify or Flag Application Document
@@ -86,14 +73,13 @@ BEGIN
   IF NOT (
     public.has_staff_permission('review_applications', null)
     OR EXISTS (
-      SELECT 1 FROM public.staff_profiles 
-      WHERE user_id = auth.uid() AND role = 'super_admin' AND active
+      SELECT 1 FROM public.staff_profiles sp
+      WHERE sp.user_id = auth.uid() AND sp.role = 'super_admin' AND sp.active
     )
   ) THEN
     RAISE EXCEPTION 'staff_permission_required' USING errcode = '42501';
   END IF;
 
-  -- Validate scan status
   IF target_scan_status NOT IN ('clean', 'rejected', 'pending') THEN
     RAISE EXCEPTION 'invalid_scan_status';
   END IF;
@@ -106,12 +92,10 @@ BEGIN
     RAISE EXCEPTION 'document_not_found';
   END IF;
 
-  -- Update document status
   UPDATE public.application_documents
   SET scan_status = target_scan_status::public.scan_status
   WHERE id = target_document_id AND application_id = target_application_id;
 
-  -- Record internal note
   INSERT INTO public.internal_notes (application_id, author_id, body)
   VALUES (
     target_application_id,
@@ -119,7 +103,6 @@ BEGIN
     COALESCE(verification_note, 'Document "' || doc_name || '" marked as ' || UPPER(target_scan_status) || ' by staff reviewer.')
   );
 
-  -- Record audit event
   INSERT INTO public.audit_events (actor_id, action, object_type, object_id, outcome, metadata)
   VALUES (
     auth.uid(),

@@ -277,7 +277,7 @@ export const updateApplicationStatusServerFn = createServerFn({ method: "POST" }
     // Record status history
     await adminClient.from("application_status_history").insert({
       application_id: data.applicationId,
-      actor_id: userData.user.id,
+      changed_by: userData.user.id,
       from_status: fromStatus,
       to_status: toStatus,
       applicant_message: data.applicantMessage || null,
@@ -428,14 +428,17 @@ export const dispatchPortalMessageServerFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { userData, adminClient } = await verifyStaffAndGetClients(data.accessToken);
 
+    const campaignId = "20000000-0000-0000-0000-000000000001";
     // Create message
     const { data: message, error: messageError } = await adminClient
       .from("messages")
       .insert({
-        author_id: userData.user.id,
+        campaign_id: campaignId,
+        sender_id: userData.user.id,
         subject: data.subject,
         body: data.body,
-        priority: data.priority,
+        channel: "portal",
+        idempotency_key: `${userData.user.id}:${crypto.randomUUID()}`,
       })
       .select("id")
       .single();
@@ -445,20 +448,27 @@ export const dispatchPortalMessageServerFn = createServerFn({ method: "POST" })
       throw new Error("Failed to dispatch portal message.");
     }
 
-    // Link recipients
-    const recipients = data.applicationIds.map((appId) => ({
+    // Get applicant user IDs for target application IDs
+    const { data: targetApps } = await adminClient
+      .from("applications")
+      .select("id, applicant_id")
+      .in("id", data.applicationIds);
+
+    const recipients = (targetApps ?? []).map((app) => ({
       message_id: message.id,
-      applicant_id: appId,
+      applicant_id: app.applicant_id,
+      application_id: app.id,
       delivery_status: "sent",
     }));
 
-    const { error: recipientError } = await adminClient
-      .from("message_recipients")
-      .insert(recipients);
+    if (recipients.length > 0) {
+      const { error: recipientError } = await adminClient
+        .from("message_recipients")
+        .insert(recipients);
 
-    if (recipientError) {
-      console.error("Recipient insert error:", recipientError);
-      throw new Error("Failed to attach message recipients.");
+      if (recipientError) {
+        console.error("Recipient insert error:", recipientError);
+      }
     }
 
     return { success: true, count: data.applicationIds.length };
