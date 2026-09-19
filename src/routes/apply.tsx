@@ -948,6 +948,7 @@ function ApplicationAccess() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [resetSent, setResetSent] = useState(false);
 
   const createAccount = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -962,6 +963,8 @@ function ApplicationAccess() {
     }
     setLoading(true);
     setError("");
+    setResetSent(false);
+
     const { data, error: authError } = await getSupabaseBrowserClient().auth.signUp({
       email: normalizedEmail,
       password,
@@ -970,11 +973,35 @@ function ApplicationAccess() {
       },
     });
     setLoading(false);
+
     if (authError) {
-      setError("We could not create your account. Please check the details and try again.");
+      if (
+        authError.status === 429 ||
+        authError.message?.toLowerCase().includes("rate limit") ||
+        authError.message?.toLowerCase().includes("over_email_send_rate_limit")
+      ) {
+        setError(
+          "Email verification rate limit reached. If you already created an account, click 'Sign in' above to log in with your password.",
+        );
+      } else if (authError.message?.toLowerCase().includes("already registered")) {
+        setError("An account with this email already exists. Please sign in with your password.");
+        setMode("signin");
+      } else {
+        setError(authError.message || "We could not create your account. Please check your details and try again.");
+      }
       return;
     }
-    if (!data.session) setSent(true);
+
+    // In Supabase, an existing user with email confirmation enabled returns an empty identities array
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setError("An account with this email already exists. Please sign in below.");
+      setMode("signin");
+      return;
+    }
+
+    if (!data?.session) {
+      setSent(true);
+    }
   };
 
   const signInAccount = async () => {
@@ -982,15 +1009,47 @@ function ApplicationAccess() {
     if (!normalizedEmail || !password) return;
     setLoading(true);
     setError("");
+    setResetSent(false);
+
     const { error: signInError } = await getSupabaseBrowserClient().auth.signInWithPassword({
       email: normalizedEmail,
       password,
     });
     setLoading(false);
     if (signInError) {
-      setError("The email or password is incorrect, or your email has not been confirmed.");
+      if (signInError.message?.toLowerCase().includes("rate limit")) {
+        setError("Too many sign-in attempts. Please wait a moment and try again.");
+      } else if (signInError.message?.toLowerCase().includes("invalid login credentials")) {
+        setError("Invalid email or password. If you recently registered, please ensure your email is confirmed or request a password reset.");
+      } else {
+        setError(signInError.message || "The email or password is incorrect, or your email has not been confirmed.");
+      }
       return;
     }
+  };
+
+  const handleRequestPasswordReset = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("Please enter your email address above to request a reset link.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    const { error: resetError } = await getSupabaseBrowserClient().auth.resetPasswordForEmail(
+      normalizedEmail,
+      { redirectTo: `${window.location.origin}/login` },
+    );
+    setLoading(false);
+    if (resetError) {
+      if (resetError.message?.toLowerCase().includes("rate limit")) {
+        setError("Reset link rate limit reached. Please wait a moment before trying again.");
+      } else {
+        setError(resetError.message || "Could not send password reset email. Please try again.");
+      }
+      return;
+    }
+    setResetSent(true);
   };
 
   const checkConfirmation = async () => {
@@ -1147,6 +1206,25 @@ function ApplicationAccess() {
                       ? "Create account and continue"
                       : "Sign in and continue"}
                 </Button>
+
+                {mode === "signin" && (
+                  <div className="text-center pt-1">
+                    {resetSent ? (
+                      <p className="text-xs text-brand-green-dark font-medium">
+                        Password reset link sent! Check your inbox.
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleRequestPasswordReset()}
+                        disabled={loading}
+                        className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                      >
+                        Forgot your password? Send reset link
+                      </button>
+                    )}
+                  </div>
+                )}
               </form>
               <div className="mt-5 flex gap-3 rounded-lg bg-brand-green-soft p-4 text-sm text-brand-green-dark">
                 <ShieldCheck className="h-5 w-5 shrink-0" />

@@ -49,7 +49,19 @@ function LoginPage() {
     });
     if (authError) {
       setLoading(false);
-      setError("The email or password is incorrect, or your email has not been confirmed.");
+      if (
+        authError.status === 429 ||
+        authError.message?.toLowerCase().includes("rate limit") ||
+        authError.message?.toLowerCase().includes("over_email_send_rate_limit")
+      ) {
+        setError("Sign-in rate limit reached. Please wait a moment and try again.");
+      } else if (authError.message?.toLowerCase().includes("invalid login credentials")) {
+        setError("Invalid email or password. Please verify your details or use password reset below.");
+      } else if (authError.message?.toLowerCase().includes("email not confirmed")) {
+        setError("Your email address is not yet confirmed. Please check your inbox for the confirmation link.");
+      } else {
+        setError(authError.message || "The email or password is incorrect, or your email has not been confirmed.");
+      }
       return;
     }
     const { data: staff } = await supabase

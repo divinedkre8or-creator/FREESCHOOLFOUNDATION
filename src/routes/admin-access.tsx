@@ -67,7 +67,23 @@ function AdminAccessPage() {
       });
       setLoading(false);
       if (signUpError) {
-        setError("The account could not be created. Check the email and try again.");
+        if (
+          signUpError.status === 429 ||
+          signUpError.message?.toLowerCase().includes("rate limit") ||
+          signUpError.message?.toLowerCase().includes("over_email_send_rate_limit")
+        ) {
+          setError("Email verification rate limit reached. Please wait a moment or sign in.");
+        } else if (signUpError.message?.toLowerCase().includes("already registered")) {
+          setError("An account with this email already exists. Please sign in.");
+          setMode("signin");
+        } else {
+          setError(signUpError.message || "The account could not be created. Check the email and try again.");
+        }
+        return;
+      }
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setError("An account with this email already exists. Please sign in.");
+        setMode("signin");
         return;
       }
       if (!data.session) {
@@ -82,7 +98,11 @@ function AdminAccessPage() {
       });
       if (signInError) {
         setLoading(false);
-        setError("The email or password is incorrect, or the email has not been confirmed.");
+        if (signInError.message?.toLowerCase().includes("invalid login credentials")) {
+          setError("Invalid email or password. Please verify your credentials.");
+        } else {
+          setError(signInError.message || "The email or password is incorrect, or the email has not been confirmed.");
+        }
         return;
       }
     }
