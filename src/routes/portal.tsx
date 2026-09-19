@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
+  ArrowRight,
   Award,
   Bell,
   CalendarDays,
@@ -15,6 +16,7 @@ import {
   FileCheck,
   FileText,
   HelpCircle,
+  LogOut,
   MessageSquare,
   Printer,
   Shield,
@@ -33,6 +35,7 @@ import {
   type ApplicationStatus,
 } from "@/lib/fsf";
 import { useCurrentApplication, useStore } from "@/lib/store";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   getDocumentUrl,
   loadMyApplication,
@@ -83,13 +86,29 @@ function getStageIndex(status: ApplicationStatus): number {
 function PortalPage() {
   const [section, setSection] = useState<PortalSection>("overview");
   const [loading, setLoading] = useState(true);
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeDocUrl, setActiveDocUrl] = useState<{ name: string; url: string } | null>(null);
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const application = useCurrentApplication();
   const { announcements, setState, ready } = useStore();
   const unreadMessages = application?.messages.filter((message) => !message.read) ?? [];
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    void supabase.auth.getUser().then(({ data }) => {
+      setAuthUser(data.user ? { id: data.user.id, email: data.user.email } : null);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
+    });
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -138,6 +157,14 @@ function PortalPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await getSupabaseBrowserClient().auth.signOut();
+    setState((state) => ({ ...state, currentApplicantId: null, applications: [] }));
+    setSigningOut(false);
+    void navigate({ to: "/login" });
+  };
+
   const handleViewDocument = async (doc: {
     id: string;
     name: string;
@@ -167,22 +194,58 @@ function PortalPage() {
       </div>
     );
 
-  if (!application)
+  if (!application) {
+    if (!authUser) {
+      return (
+        <div className="grid min-h-screen place-items-center bg-secondary/30 px-5">
+          <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-lift">
+            <Shield className="mx-auto h-10 w-10 text-brand-green" />
+            <h1 className="mt-4 text-2xl font-extrabold">Sign In to Your Portal</h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Access to your official admission and scholarship records requires authenticated
+              sign-in.
+            </p>
+            <Button asChild className="mt-6 w-full" size="lg">
+              <Link to="/login">Sign In with Applicant Account</Link>
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="grid min-h-screen place-items-center bg-secondary/30 px-5">
-        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-lift">
-          <Shield className="mx-auto h-10 w-10 text-brand-green" />
-          <h1 className="mt-4 text-2xl font-extrabold">Sign In to Your Portal</h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Access to your official admission and scholarship records requires authenticated
-            sign-in.
+        <div className="max-w-lg rounded-2xl border border-border bg-card p-8 text-center shadow-lift">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-green-soft">
+            <FileText className="h-7 w-7 text-brand-green-dark" />
+          </div>
+          <h1 className="mt-5 text-2xl font-extrabold">Application Incomplete</h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            You are signed in as <strong className="text-foreground">{authUser.email}</strong>. We
+            could not find a submitted scholarship application under this account for the 2026
+            campaign.
           </p>
-          <Button asChild className="mt-6 w-full" size="lg">
-            <Link to="/login">Sign In with Applicant Account</Link>
-          </Button>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link to="/apply">
+                Start or Continue Application <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto"
+              disabled={signingOut}
+              onClick={() => void handleSignOut()}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              {signingOut ? "Signing out…" : "Switch Account"}
+            </Button>
+          </div>
         </div>
       </div>
     );
+  }
 
   const copy = STATUS_COPY[application.status];
   const urgentMessage = unreadMessages.find((message) => message.priority === "high");

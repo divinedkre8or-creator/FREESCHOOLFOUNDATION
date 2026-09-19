@@ -23,6 +23,17 @@ function AdminRoute() {
 
   useEffect(() => {
     let active = true;
+    const fetchApplications = async () => {
+      try {
+        const applications = await loadAdminApplications();
+        if (active) {
+          setState((state) => ({ ...state, applications, currentApplicantId: null }));
+        }
+      } catch (err) {
+        console.error("Failed to load admin applications:", err);
+      }
+    };
+
     const verify = async () => {
       const supabase = getSupabaseBrowserClient();
       const { data: sessionData } = await supabase.auth.getSession();
@@ -38,20 +49,32 @@ function AdminRoute() {
         .eq("active", true)
         .maybeSingle();
       if (!error && data?.active) {
-        try {
-          const applications = await loadAdminApplications();
-          if (active) {
-            setState((state) => ({ ...state, applications, currentApplicantId: null }));
-            setAccess("allowed");
-          }
-        } catch {
-          if (active) setAccess("allowed");
-        }
-      } else if (active) setAccess("denied");
+        if (active) setAccess("allowed");
+        await fetchApplications();
+      } else if (active) {
+        setAccess("denied");
+      }
     };
+
     void verify();
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void fetchApplications();
+      }
+    }, 15000);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void fetchApplications();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       active = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [setState]);
 

@@ -114,6 +114,7 @@ function ApplyPage() {
   const [authUser, setAuthUser] = useState<
     { id: string; email: string | undefined } | null | undefined
   >(undefined);
+  const [existingSubmitted, setExistingSubmitted] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(initialForm);
   const [file, setFile] = useState<File | null>(null);
@@ -128,11 +129,43 @@ function ApplyPage() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    void supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-      const user = data.session?.user;
+    const checkUser = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
       setAuthUser(user ? { id: user.id, email: user.email } : null);
-      if (user?.email) setForm((current) => ({ ...current, email: current.email || user.email! }));
-    });
+      if (user) {
+        if (user.email) setForm((current) => ({ ...current, email: current.email || user.email! }));
+
+        const { data: existing } = await supabase
+          .from("applications")
+          .select("id, status, application_number, personal")
+          .eq("applicant_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existing?.application_number && existing.status !== "draft") {
+          setExistingSubmitted(existing.application_number);
+        } else if (existing?.personal && typeof existing.personal === "object") {
+          const p = existing.personal as Record<string, string>;
+          setForm((current) => ({
+            ...current,
+            firstName: p["firstName"] || current.firstName,
+            middleName: p["middleName"] || current.middleName,
+            lastName: p["lastName"] || current.lastName,
+            dob: p["dob"] || current.dob,
+            phone: p["phone"] || current.phone,
+            email: p["email"] || user.email || current.email,
+            address: p["address"] || current.address,
+            stateOfResidence: p["stateOfResidence"] || current.stateOfResidence,
+            stateOfOrigin: p["stateOfOrigin"] || current.stateOfOrigin,
+          }));
+        }
+      }
+    };
+
+    void checkUser();
+
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         const user = session?.user;
@@ -294,6 +327,40 @@ function ApplyPage() {
 
   if (authUser === undefined) return <ApplicationAccessLoading />;
   if (!authUser) return <ApplicationAccess />;
+
+  if (existingSubmitted) {
+    return (
+      <div className="min-h-screen bg-brand-green-soft/40 py-8 sm:py-12">
+        <div className="container-page max-w-xl">
+          <div className="mb-6 flex items-center justify-between">
+            <Logo />
+            <Link to="/" className="text-xs font-semibold text-brand-green-dark sm:text-sm">
+              Back to website
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-lift sm:p-8">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-green-soft">
+              <CheckCircle2 className="h-7 w-7 text-brand-green-dark" />
+            </div>
+            <h1 className="mt-5 text-2xl font-extrabold">Application Already Submitted</h1>
+            <p className="mt-2 font-mono text-sm font-bold text-brand-orange">{existingSubmitted}</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              You have already submitted a scholarship application for the active 2026 campaign. You
+              can track your review progress, Foundation messages, and admission records in your
+              portal.
+            </p>
+            <div className="mt-6">
+              <Button asChild size="lg" className="w-full">
+                <Link to="/portal">
+                  Go to Admission Portal <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -877,6 +944,7 @@ function ApplicationAccess() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<"signup" | "signin">("signup");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -909,6 +977,31 @@ function ApplicationAccess() {
     if (!data.session) setSent(true);
   };
 
+  const signInAccount = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) return;
+    setLoading(true);
+    setError("");
+    const { error: signInError } = await getSupabaseBrowserClient().auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+    setLoading(false);
+    if (signInError) {
+      setError("The email or password is incorrect, or your email has not been confirmed.");
+      return;
+    }
+  };
+
+  const checkConfirmation = async () => {
+    setLoading(true);
+    const { data } = await getSupabaseBrowserClient().auth.getSession();
+    setLoading(false);
+    if (!data.session) {
+      setError("We could not detect your confirmed session yet. Please click the link in your email or sign in below.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-brand-green-soft/40">
       <header className="border-b border-border bg-background">
@@ -923,25 +1016,69 @@ function ApplicationAccess() {
         <section className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-lift sm:p-8">
           {sent ? (
             <>
-              <Mail className="h-8 w-8 text-brand-green" />
-              <h1 className="mt-5 text-2xl font-extrabold">Confirm your email</h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-green-soft">
+                <Mail className="h-7 w-7 text-brand-green-dark" />
+              </div>
+              <h1 className="mt-5 text-center text-2xl font-extrabold">Confirm your email</h1>
+              <p className="mt-3 text-center text-sm leading-relaxed text-muted-foreground">
                 We sent a confirmation link to <strong className="text-foreground">{email}</strong>.
-                Confirm your email, then sign in with the password you created to continue.
+                Click the link in your email to verify your address and continue your application.
               </p>
-              <Button asChild className="mt-6 w-full">
-                <Link to="/login">Go to applicant login</Link>
-              </Button>
+              {error && (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive text-center"
+                >
+                  {error}
+                </p>
+              )}
+              <div className="mt-6 space-y-3">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={loading}
+                  onClick={() => void checkConfirmation()}
+                >
+                  {loading ? "Checking verification…" : "I've clicked the link (Continue)"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  onClick={() => {
+                    setSent(false);
+                    setMode("signin");
+                    setError("");
+                  }}
+                >
+                  Sign in with password
+                </Button>
+              </div>
             </>
           ) : (
             <>
-              <p className="text-sm font-bold uppercase tracking-wider text-brand-orange">
-                Scholarship application
-              </p>
-              <h1 className="mt-3 text-2xl font-extrabold">Create your applicant account</h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Use your email address and create a password. You will use both whenever you return
-                to your application portal.
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
+                  Scholarship application
+                </p>
+                <button
+                  type="button"
+                  className="text-xs font-bold text-brand-green-dark hover:underline"
+                  onClick={() => {
+                    setError("");
+                    setMode(mode === "signup" ? "signin" : "signup");
+                  }}
+                >
+                  {mode === "signup" ? "Already have account? Sign in" : "Need an account? Create one"}
+                </button>
+              </div>
+              <h1 className="mt-3 text-2xl font-extrabold">
+                {mode === "signup" ? "Create your applicant account" : "Sign in to your application"}
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {mode === "signup"
+                  ? "Use your email address and create a password to begin your scholarship application."
+                  : "Enter your email and password to resume or submit your scholarship application."}
               </p>
               {error && (
                 <p
@@ -955,7 +1092,7 @@ function ApplicationAccess() {
                 className="mt-6 space-y-5"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  void createAccount();
+                  void (mode === "signup" ? createAccount() : signInAccount());
                 }}
               >
                 <Field label="Email address" required>
@@ -969,48 +1106,51 @@ function ApplicationAccess() {
                     required
                   />
                 </Field>
-                <Field label="Create password" required>
+                <Field label={mode === "signup" ? "Create password" : "Password"} required>
                   <Input
                     type="password"
-                    autoComplete="new-password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
                     className="h-11"
                     minLength={8}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
                   />
-                  <span className="text-xs text-muted-foreground">At least 8 characters</span>
+                  {mode === "signup" && (
+                    <span className="text-xs text-muted-foreground">At least 8 characters</span>
+                  )}
                 </Field>
-                <Field label="Confirm password" required>
-                  <Input
-                    type="password"
-                    autoComplete="new-password"
-                    className="h-11"
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    required
-                  />
-                </Field>
+                {mode === "signup" && (
+                  <Field label="Confirm password" required>
+                    <Input
+                      type="password"
+                      autoComplete="new-password"
+                      className="h-11"
+                      minLength={8}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      required
+                    />
+                  </Field>
+                )}
                 <Button
                   type="submit"
                   size="lg"
                   className="h-12 w-full text-base font-bold"
                   disabled={loading}
                 >
-                  {loading ? "Creating account…" : "Create account and continue"}
+                  {loading
+                    ? mode === "signup"
+                      ? "Creating account…"
+                      : "Signing in…"
+                    : mode === "signup"
+                      ? "Create account and continue"
+                      : "Sign in and continue"}
                 </Button>
               </form>
-              <p className="mt-5 text-center text-sm text-muted-foreground">
-                Already started an application?{" "}
-                <Link to="/login" className="font-bold text-brand-green-dark hover:underline">
-                  Sign in to continue
-                </Link>
-              </p>
               <div className="mt-5 flex gap-3 rounded-lg bg-brand-green-soft p-4 text-sm text-brand-green-dark">
                 <ShieldCheck className="h-5 w-5 shrink-0" />
-                Your application is private and accessible only with your verified email and
-                password.
+                Your application is private and accessible only with your verified credentials.
               </div>
             </>
           )}

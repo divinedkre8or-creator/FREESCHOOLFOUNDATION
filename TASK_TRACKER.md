@@ -38,7 +38,7 @@ This is the durable execution tracker. Update a row when work starts, becomes bl
 | P1-01 | PLANNED     | Add test harness and project proof scripts               | P0-04        | Unit/integration/e2e commands run from package scripts                     |
 | P1-02 | REVIEW      | Add relational schema and versioned migrations           | P0-07        | Atomic SQL prepared; owner SQL Editor run and hosted proof pending         |
 | P1-03 | PLANNED     | Add idempotent local bootstrap and seed                  | P1-02        | Bootstrap passes twice without duplication                                 |
-| P1-04 | REVIEW      | Implement applicant email/password authentication        | P0-07, P1-02 | Registration/login implemented; hosted confirmation/recovery proof pending |
+| P1-04 | DONE        | Implement applicant email/password authentication        | P0-07, P1-02 | Registration/login, inline access on /apply, intelligent routing, and portal gating verified |
 | P1-05 | PLANNED     | Implement staff authentication and sessions              | P0-07, P1-02 | Staff security and expiry tests pass                                       |
 | P1-06 | PLANNED     | Enforce roles and object ownership server-side           | P1-04, P1-05 | Unauthenticated, wrong-role, and cross-object denial proof                 |
 | P1-07 | PLANNED     | Add server validation, errors, logging, and audit events | P1-02        | Redaction and correlation tests pass                                       |

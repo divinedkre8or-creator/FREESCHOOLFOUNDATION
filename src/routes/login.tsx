@@ -42,21 +42,48 @@ function LoginPage() {
     setLoading(true);
     setError("");
     setMessage("");
-    const { error: authError } = await getSupabaseBrowserClient().auth.signInWithPassword({
+    const supabase = getSupabaseBrowserClient();
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
-    setLoading(false);
     if (authError) {
+      setLoading(false);
       setError("The email or password is incorrect, or your email has not been confirmed.");
       return;
     }
-    const { data: staff } = await getSupabaseBrowserClient()
+    const { data: staff } = await supabase
       .from("staff_profiles")
       .select("active")
       .eq("active", true)
       .maybeSingle();
-    void navigate({ to: staff?.active ? "/admin" : "/portal" });
+
+    if (staff?.active) {
+      setLoading(false);
+      void navigate({ to: "/admin" });
+      return;
+    }
+
+    if (authData.user) {
+      const { data: existingApp } = await supabase
+        .from("applications")
+        .select("id, status, application_number")
+        .eq("applicant_id", authData.user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setLoading(false);
+      if (existingApp?.application_number && existingApp.status !== "draft") {
+        void navigate({ to: "/portal" });
+      } else {
+        void navigate({ to: "/apply" });
+      }
+      return;
+    }
+
+    setLoading(false);
+    void navigate({ to: "/portal" });
   };
 
   const requestReset = async () => {

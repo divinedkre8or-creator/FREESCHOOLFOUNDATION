@@ -208,15 +208,80 @@ export async function loadMyApplication(): Promise<Application | null> {
   return mapApplication(data as unknown as ApplicationRow);
 }
 
+export type RegisteredUser = {
+  userId: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  emailConfirmed: boolean;
+  hasApplication: boolean;
+  applicationId?: string | null;
+  applicationNumber?: string | null;
+  applicationStatus: string;
+  applicationLevel?: string | null;
+  programmeName?: string | null;
+  registeredAt: string;
+  lastSignInAt?: string | null;
+};
+
+export async function loadRegisteredUsers(): Promise<RegisteredUser[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc("list_registered_users");
+  if (error) {
+    console.warn("list_registered_users RPC not found or returned error, falling back:", error);
+    const { data: apps } = await supabase
+      .from("applications")
+      .select("id, applicant_id, status, application_number, level, personal, created_at, programmes(name)")
+      .order("created_at", { ascending: false });
+
+    return (apps ?? []).map((app: Record<string, unknown>) => {
+      const p = (app["personal"] || {}) as Record<string, string>;
+      const prog = app["programmes"] as { name?: string } | null;
+      return {
+        userId: String(app["applicant_id"]),
+        email: p["email"] || "",
+        firstName: p["firstName"] || null,
+        lastName: p["lastName"] || null,
+        phone: p["phone"] || null,
+        emailConfirmed: true,
+        hasApplication: true,
+        applicationId: String(app["id"]),
+        applicationNumber: app["application_number"] ? String(app["application_number"]) : null,
+        applicationStatus: String(app["status"] || "draft"),
+        applicationLevel: app["level"] ? String(app["level"]) : null,
+        programmeName: prog?.name || null,
+        registeredAt: String(app["created_at"]),
+        lastSignInAt: null,
+      };
+    });
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    userId: String(row["user_id"]),
+    email: String(row["email"] ?? ""),
+    firstName: row["first_name"] ? String(row["first_name"]) : null,
+    lastName: row["last_name"] ? String(row["last_name"]) : null,
+    phone: row["phone"] ? String(row["phone"]) : null,
+    emailConfirmed: Boolean(row["email_confirmed"]),
+    hasApplication: Boolean(row["has_application"]),
+    applicationId: row["application_id"] ? String(row["application_id"]) : null,
+    applicationNumber: row["application_number"] ? String(row["application_number"]) : null,
+    applicationStatus: String(row["application_status"] ?? "registered_only"),
+    applicationLevel: row["application_level"] ? String(row["application_level"]) : null,
+    programmeName: row["programme_name"] ? String(row["programme_name"]) : null,
+    registeredAt: String(row["registered_at"]),
+    lastSignInAt: row["last_sign_in_at"] ? String(row["last_sign_in_at"]) : null,
+  }));
+}
+
 export async function loadAdminApplications(): Promise<Application[]> {
   const { data, error } = await getSupabaseBrowserClient()
     .from("applications")
     .select(APPLICATION_SELECT)
     .order("created_at", { ascending: false });
   if (error) throw new Error("Applications could not be loaded.");
-  return ((data ?? []) as unknown as ApplicationRow[])
-    .filter((row) => Boolean(row.application_number))
-    .map(mapApplication);
+  return ((data ?? []) as unknown as ApplicationRow[]).map(mapApplication);
 }
 
 export async function markMessageRead(messageId: string): Promise<void> {
@@ -336,12 +401,12 @@ function mapApplication(data: ApplicationRow): Application {
 
   return {
     id: data.id,
-    appNumber: data.application_number ?? "",
+    appNumber: data.application_number || `DRAFT-${data.id.slice(0, 6).toUpperCase()}`,
     createdAt: data.created_at,
     ...(data.submitted_at ? { submittedAt: data.submitted_at } : {}),
-    status: STATUS_MAP[data.status] ?? "Submitted",
+    status: STATUS_MAP[data.status] ?? (data.status === "draft" ? "Draft" : "Submitted"),
     campaign: "Citi Polytechnic ODL Scholarship 2026",
-    level: String(data.level).toUpperCase() as "ND" | "HND",
+    level: String(data.level || "ND").toUpperCase() as "ND" | "HND",
     programme: (programmeRelation?.name ?? "Computer Science") as Application["programme"],
     personal,
     education,

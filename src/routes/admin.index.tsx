@@ -1,13 +1,37 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, Clock3, FileWarning, GraduationCap, Users } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  FileWarning,
+  GraduationCap,
+  RotateCcw,
+  Users,
+} from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { fullName, STATUSES } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
+import { loadAdminApplications } from "@/lib/supabase/applications";
 
 export const Route = createFileRoute("/admin/")({ component: AdminDashboard });
 function AdminDashboard() {
-  const { applications } = useStore();
+  const { applications, setState } = useStore();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const refreshed = await loadAdminApplications();
+      setState((state) => ({ ...state, applications: refreshed }));
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const stats = [
     {
       label: "Total applications",
@@ -44,11 +68,22 @@ function AdminDashboard() {
             See what needs attention across the active campaign.
           </p>
         </div>
-        <Button asChild className="w-full sm:w-auto">
-          <Link to="/admin/applicants">
-            Review applications <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button
+            variant="outline"
+            size="default"
+            disabled={refreshing}
+            onClick={() => void handleRefresh()}
+          >
+            <RotateCcw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+          <Button asChild className="w-full sm:w-auto">
+            <Link to="/admin/applicants">
+              Review applications <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
       <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
