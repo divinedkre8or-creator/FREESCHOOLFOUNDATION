@@ -54,26 +54,21 @@ const dispatchMessageSchema = z.object({
 
 // Helper to verify staff authorization and return clients
 async function verifyStaffAndGetClients(accessToken: string) {
-  const { url: supabaseUrl, publishableKey } = getServerSupabaseConfig();
+  const { url: supabaseUrl } = getServerSupabaseConfig();
   const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
   if (!serviceRoleKey) {
     throw new Error("Server service role key is not configured.");
   }
 
-  const userClient = createClient(supabaseUrl, publishableKey, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { data: userData, error: userError } = await userClient.auth.getUser(accessToken);
-  if (userError || !userData.user) {
-    throw new Error("Your session has expired. Please sign in again.");
-  }
-
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const { data: userData, error: userError } = await adminClient.auth.getUser(accessToken);
+  if (userError || !userData.user) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
 
   // Verify staff role
   const { data: staffProfile } = await adminClient
