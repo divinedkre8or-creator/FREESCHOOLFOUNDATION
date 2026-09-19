@@ -192,7 +192,7 @@ export const getAdminApplicationsServerFn = createServerFn({ method: "POST" })
         programmes (
           id,
           name,
-          faculty
+          slug
         ),
         application_documents (
           id,
@@ -226,7 +226,6 @@ export const getAdminApplicationsServerFn = createServerFn({ method: "POST" })
             id,
             subject,
             body,
-            priority,
             created_at
           )
         )

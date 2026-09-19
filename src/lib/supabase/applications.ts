@@ -3,7 +3,7 @@ import type { Application, ApplicationStatus } from "../fsf";
 
 const CAMPAIGN_ID = "20000000-0000-0000-0000-000000000001";
 const APPLICATION_SELECT =
-  "id,application_number,status,level,personal,education,scholarship_responses,communication_consent,created_at,submitted_at,programmes(name),application_documents(id,display_name,document_type,uploaded_at,storage_path,scan_status,requested_at),application_status_history(id,to_status,created_at,applicant_message),internal_notes(id,body,created_at),message_recipients(read_at,messages(id,subject,body,created_at,priority))";
+  "id,application_number,status,level,personal,education,scholarship_responses,communication_consent,created_at,submitted_at,programmes(name),application_documents(id,display_name,document_type,uploaded_at,storage_path,scan_status,requested_at),application_status_history(id,to_status,created_at,applicant_message),internal_notes(id,body,created_at),message_recipients(read_at,messages(id,subject,body,created_at))";
 
 type ApplicationRow = {
   id: string;
@@ -27,7 +27,7 @@ type ApplicationRow = {
       subject: string;
       body: string;
       created_at: string;
-      priority: "normal" | "high";
+      priority?: "normal" | "high";
     } | null;
   }> | null;
 };
@@ -490,7 +490,7 @@ function mapApplication(data: ApplicationRow): Application {
         sentAt: recipient.messages!.created_at,
         channel: "Portal" as const,
         read: Boolean(recipient.read_at),
-        priority: recipient.messages!.priority,
+        priority: recipient.messages?.priority ?? "normal",
       }))
       .sort((a, b) => b.sentAt.localeCompare(a.sentAt)),
     notes: notes
