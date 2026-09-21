@@ -504,7 +504,7 @@ export const dispatchPortalMessageServerFn = createServerFn({ method: "POST" })
       message_id: message.id,
       applicant_id: app.applicant_id,
       application_id: app.id,
-      delivery_status: "sent",
+      delivery_status: "delivered" as const,
     }));
 
     if (recipients.length > 0) {
