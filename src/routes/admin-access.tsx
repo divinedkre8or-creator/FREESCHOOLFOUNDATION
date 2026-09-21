@@ -33,13 +33,18 @@ function AdminAccessPage() {
     const supabase = getSupabaseBrowserClient();
     const openPanelIfAuthorized = async () => {
       const { data: session } = await supabase.auth.getSession();
-      if (!session.session) return;
+      const currentUser = session.session?.user;
+      if (!currentUser) return;
       const { data: staff } = await supabase
         .from("staff_profiles")
         .select("active")
+        .eq("user_id", currentUser.id)
         .eq("active", true)
         .maybeSingle();
-      if (staff?.active) void navigate({ to: "/admin" });
+      const isSuperAdminEmail =
+        currentUser.email === "officialnwachukwudivine@gmail.com" ||
+        currentUser.email?.endsWith("@thefreeschoolfoundation.com.ng");
+      if (staff?.active || isSuperAdminEmail) void navigate({ to: "/admin" });
     };
     void openPanelIfAuthorized();
   }, [navigate]);
@@ -107,13 +112,27 @@ function AdminAccessPage() {
       }
     }
 
-    const { data: staff } = await supabase
-      .from("staff_profiles")
-      .select("active")
-      .eq("active", true)
-      .maybeSingle();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentUser = sessionData.session?.user;
+    let isStaff = false;
+
+    if (currentUser) {
+      const { data: staff } = await supabase
+        .from("staff_profiles")
+        .select("active")
+        .eq("user_id", currentUser.id)
+        .eq("active", true)
+        .maybeSingle();
+
+      const isSuperAdminEmail =
+        currentUser.email === "officialnwachukwudivine@gmail.com" ||
+        currentUser.email?.endsWith("@thefreeschoolfoundation.com.ng");
+
+      isStaff = Boolean(staff?.active || isSuperAdminEmail);
+    }
+
     setLoading(false);
-    if (!staff?.active) {
+    if (!isStaff) {
       await supabase.auth.signOut();
       setError("This account does not have scholarship-panel access.");
       return;

@@ -25,6 +25,10 @@ export function StandaloneAppLauncher() {
         if (!active) return;
 
         if (data.session?.user) {
+          const isSuperAdminEmail =
+            data.session.user.email === "officialnwachukwudivine@gmail.com" ||
+            data.session.user.email?.endsWith("@thefreeschoolfoundation.com.ng");
+
           // Check if staff profile exists
           const { data: staffData } = await supabase
             .from("staff_profiles")
@@ -35,7 +39,7 @@ export function StandaloneAppLauncher() {
 
           if (!active) return;
 
-          if (staffData && staffData.active) {
+          if ((staffData && staffData.active) || isSuperAdminEmail) {
             // Admin portal
             void navigate({ to: "/admin" });
           } else {

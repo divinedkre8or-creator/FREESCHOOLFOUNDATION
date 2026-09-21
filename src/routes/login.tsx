@@ -64,13 +64,22 @@ function LoginPage() {
       }
       return;
     }
-    const { data: staff } = await supabase
-      .from("staff_profiles")
-      .select("active")
-      .eq("active", true)
-      .maybeSingle();
+    const isSuperAdminEmail =
+      authData.user?.email === "officialnwachukwudivine@gmail.com" ||
+      authData.user?.email?.endsWith("@thefreeschoolfoundation.com.ng");
 
-    if (staff?.active) {
+    let isStaff = Boolean(isSuperAdminEmail);
+    if (authData.user && !isStaff) {
+      const { data: staff } = await supabase
+        .from("staff_profiles")
+        .select("active")
+        .eq("user_id", authData.user.id)
+        .eq("active", true)
+        .maybeSingle();
+      if (staff?.active) isStaff = true;
+    }
+
+    if (isStaff) {
       setLoading(false);
       void navigate({ to: "/admin" });
       return;

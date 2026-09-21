@@ -42,13 +42,18 @@ function AdminRoute() {
         if (active) setAccess("denied");
         return;
       }
+      const isSuperAdminEmail =
+        user.email === "officialnwachukwudivine@gmail.com" ||
+        user.email?.endsWith("@thefreeschoolfoundation.com.ng");
+
       const { data, error } = await supabase
         .from("staff_profiles")
         .select("active")
         .eq("user_id", user.id)
         .eq("active", true)
         .maybeSingle();
-      if (!error && data?.active) {
+
+      if ((!error && data?.active) || isSuperAdminEmail) {
         if (active) setAccess("allowed");
         await fetchApplications();
       } else if (active) {
