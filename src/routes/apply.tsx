@@ -37,6 +37,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { submitApplicationToSupabase } from "@/lib/supabase/applications";
 import { sendPlatformEmail } from "@/lib/email/platform-email";
 import { seoHead } from "@/lib/seo";
+import { compressImageFile } from "@/lib/image-compressor";
 
 export const Route = createFileRoute("/apply")({
   head: () =>
@@ -110,6 +111,8 @@ const initialForm: FormState = {
   goals: "",
 };
 
+const APPLICATION_DRAFT_KEY = "fsf_applicant_draft_v1";
+
 function ApplyPage() {
   const [authUser, setAuthUser] = useState<
     { id: string; email: string | undefined } | null | undefined
@@ -117,6 +120,7 @@ function ApplyPage() {
   const [existingSubmitted, setExistingSubmitted] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(initialForm);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [declaration, setDeclaration] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -128,6 +132,25 @@ function ApplyPage() {
   const fileName = file?.name ?? "";
 
   useEffect(() => {
+    // Attempt local draft recovery
+    try {
+      if (typeof window !== "undefined") {
+        const localDraft = localStorage.getItem(APPLICATION_DRAFT_KEY);
+        if (localDraft) {
+          const parsed = JSON.parse(localDraft);
+          if (parsed?.form && typeof parsed.form === "object") {
+            setForm((prev) => ({ ...prev, ...parsed.form }));
+            if (typeof parsed.step === "number" && parsed.step >= 0 && parsed.step <= 5) {
+              setStep(parsed.step);
+            }
+            setDraftRestored(true);
+          }
+        }
+      }
+    } catch {
+      // Ignore local storage parse error
+    }
+
     const supabase = getSupabaseBrowserClient();
     const checkUser = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -177,6 +200,20 @@ function ApplyPage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Dual persistence: auto-save draft locally on every change
+  useEffect(() => {
+    if (typeof window !== "undefined" && !existingSubmitted && !submitted) {
+      try {
+        localStorage.setItem(
+          APPLICATION_DRAFT_KEY,
+          JSON.stringify({ form, step, savedAt: Date.now() }),
+        );
+      } catch {
+        // Ignore storage write failure
+      }
+    }
+  }, [form, step, existingSubmitted, submitted]);
+
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -206,6 +243,19 @@ function ApplyPage() {
       nextErrors.push("Accept the declaration and communication consent to submit.");
     setErrors(nextErrors);
     return nextErrors.length === 0;
+  };
+
+  const handleStepClick = (targetStep: number) => {
+    if (targetStep < step) {
+      setErrors([]);
+      setStep(targetStep);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (targetStep === step + 1) {
+      if (validate()) {
+        setStep(targetStep);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
   };
 
   const goNext = async () => {
@@ -320,6 +370,13 @@ function ApplyPage() {
       history: [{ id: crypto.randomUUID(), status: "Submitted", at: now, by: "Applicant" }],
       consentCommunication: consent,
     };
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(APPLICATION_DRAFT_KEY);
+      }
+    } catch {
+      // Ignore
+    }
     submitApplication(application);
     setSubmitted(application);
     setSubmitting(false);
@@ -386,28 +443,88 @@ function ApplyPage() {
           <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
             Your application
           </p>
-          <ol className="mt-5 space-y-4">
-            {STEPS.map((name, index) => (
-              <li
-                key={name}
-                className={`flex gap-3 text-sm ${index === step ? "font-bold text-foreground" : index < step ? "text-brand-green-dark" : "text-muted-foreground"}`}
-              >
-                <span
-                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${index <= step ? "border-brand-green bg-brand-green-soft" : "border-border"}`}
-                >
-                  {index < step ? <Check className="h-4 w-4" /> : index + 1}
-                </span>
-                <span className="pt-1">{name}</span>
-              </li>
-            ))}
+          <ol className="mt-5 space-y-2">
+            {STEPS.map((name, index) => {
+              const isCurrent = index === step;
+              const isCompleted = index < step;
+              return (
+                <li key={name}>
+                  <button
+                    type="button"
+                    disabled={index > step + 1 || submitting}
+                    onClick={() => handleStepClick(index)}
+                    className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left text-sm transition-all ${
+                      isCurrent
+                        ? "bg-brand-green-soft/80 font-bold text-brand-green-dark shadow-sm"
+                        : isCompleted
+                          ? "cursor-pointer font-medium text-foreground hover:bg-secondary"
+                          : "cursor-not-allowed text-muted-foreground opacity-60"
+                    }`}
+                  >
+                    <span
+                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-bold ${
+                        isCurrent
+                          ? "border-brand-green bg-brand-green text-white"
+                          : isCompleted
+                            ? "border-brand-green bg-brand-green-soft text-brand-green-dark"
+                            : "border-border bg-background text-muted-foreground"
+                      }`}
+                    >
+                      {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
+                    </span>
+                    <span className="truncate">{name}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ol>
         </aside>
         <main className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5 md:p-8">
+          {draftRestored && (
+            <div className="mb-5 flex items-center justify-between rounded-lg border border-brand-green/30 bg-brand-green-soft/40 px-3.5 py-2 text-xs text-brand-green-dark">
+              <span>Your application progress was automatically restored.</span>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.removeItem(APPLICATION_DRAFT_KEY);
+                    setForm(initialForm);
+                    setStep(0);
+                    setDraftRestored(false);
+                  } catch {
+                    // Ignore
+                  }
+                }}
+                className="font-bold underline hover:text-foreground"
+              >
+                Start fresh
+              </button>
+            </div>
+          )}
           <div className="flex items-start justify-between gap-3 text-xs font-semibold sm:text-sm">
             <span>Step {step + 1} of 6</span>
             <span className="text-muted-foreground">{STEPS[step]}</span>
           </div>
           <Progress value={((step + 1) / 6) * 100} className="mt-3" />
+          {/* Mobile step chips */}
+          <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+            {STEPS.map((name, index) => (
+              <button
+                key={name}
+                type="button"
+                disabled={index > step + 1 || submitting}
+                onClick={() => handleStepClick(index)}
+                className={`h-2 flex-1 rounded-full transition-all ${
+                  index === step
+                    ? "bg-brand-green"
+                    : index < step
+                      ? "bg-brand-green/50"
+                      : "bg-muted"
+                }`}
+                aria-label={`Step ${index + 1}: ${name}`}
+              />
+            ))}
+          </div>
           {errors.length > 0 && (
             <div
               role="alert"
@@ -508,6 +625,8 @@ function Personal({
         <Field label="First name" required>
           <Input
             className={fieldClass}
+            autoCapitalize="words"
+            autoComplete="given-name"
             value={form.firstName}
             onChange={(e) => update("firstName", e.target.value)}
           />
@@ -515,6 +634,8 @@ function Personal({
         <Field label="Middle name">
           <Input
             className={fieldClass}
+            autoCapitalize="words"
+            autoComplete="additional-name"
             value={form.middleName}
             onChange={(e) => update("middleName", e.target.value)}
           />
@@ -522,6 +643,8 @@ function Personal({
         <Field label="Last name" required>
           <Input
             className={fieldClass}
+            autoCapitalize="words"
+            autoComplete="family-name"
             value={form.lastName}
             onChange={(e) => update("lastName", e.target.value)}
           />
@@ -538,6 +661,9 @@ function Personal({
           <Input
             className={fieldClass}
             type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="08012345678"
             value={form.phone}
             onChange={(e) => update("phone", e.target.value)}
           />
@@ -546,6 +672,8 @@ function Personal({
           <Input
             className={fieldClass}
             type="email"
+            inputMode="email"
+            autoComplete="email"
             value={form.email}
             readOnly
             aria-readonly="true"
@@ -553,7 +681,12 @@ function Personal({
         </Field>
         <div className="md:col-span-2">
           <Field label="Residential address" required>
-            <Textarea value={form.address} onChange={(e) => update("address", e.target.value)} />
+            <Textarea
+              autoCapitalize="sentences"
+              autoComplete="street-address"
+              value={form.address}
+              onChange={(e) => update("address", e.target.value)}
+            />
           </Field>
         </div>
         <Field label="State of residence">
@@ -601,7 +734,7 @@ function Programme({
         ))}
       </div>
       <div className="mt-6">
-        <Field label="Programme">
+        <Field label="Target programme">
           <select
             className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
             value={form.programme}
@@ -625,19 +758,20 @@ function Education({
 }) {
   return (
     <>
-      <h1 className="text-2xl font-extrabold md:text-3xl">
-        {form.level === "ND" ? "Your secondary education" : "Your ND qualification"}
-      </h1>
+      <h1 className="text-2xl font-extrabold md:text-3xl">Academic qualification</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Add the qualification our team will verify.
+        {form.level === "ND"
+          ? "Tell us about your secondary school background and examination results."
+          : "Provide your National Diploma details and graduation record."}
       </p>
       <div className="mt-7 grid gap-5 md:grid-cols-2">
         {form.level === "ND" ? (
           <>
             <div className="md:col-span-2">
-              <Field label="Secondary school" required>
+              <Field label="Secondary school attended" required>
                 <Input
                   className={fieldClass}
+                  autoCapitalize="words"
                   value={form.secondarySchool}
                   onChange={(e) => update("secondarySchool", e.target.value)}
                 />
@@ -654,6 +788,8 @@ function Education({
               <Input
                 className={fieldClass}
                 inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
                 value={form.examYear}
                 onChange={(e) => update("examYear", e.target.value)}
               />
@@ -661,6 +797,7 @@ function Education({
             <Field label="Examination number">
               <Input
                 className={fieldClass}
+                autoCapitalize="characters"
                 value={form.examNumber}
                 onChange={(e) => update("examNumber", e.target.value)}
               />
@@ -672,6 +809,7 @@ function Education({
               <Field label="ND institution" required>
                 <Input
                   className={fieldClass}
+                  autoCapitalize="words"
                   value={form.ndInstitution}
                   onChange={(e) => update("ndInstitution", e.target.value)}
                 />
@@ -680,6 +818,7 @@ function Education({
             <Field label="ND programme" required>
               <Input
                 className={fieldClass}
+                autoCapitalize="words"
                 value={form.ndProgramme}
                 onChange={(e) => update("ndProgramme", e.target.value)}
               />
@@ -687,6 +826,9 @@ function Education({
             <Field label="Graduation year" required>
               <Input
                 className={fieldClass}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
                 value={form.ndGraduationYear}
                 onChange={(e) => update("ndGraduationYear", e.target.value)}
               />
@@ -765,6 +907,46 @@ function Documents({
   fileName: string;
   setFile: (value: File | null) => void;
 }) {
+  const [compressing, setCompressing] = useState(false);
+  const [compressionNotice, setCompressionNotice] = useState<string | null>(null);
+
+  const handleFileSelection = async (selected: File | null) => {
+    if (!selected) {
+      setFile(null);
+      setCompressionNotice(null);
+      return;
+    }
+
+    const originalSizeKb = Math.round(selected.size / 1024);
+    if (
+      (selected.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(selected.name)) &&
+      selected.size > 250 * 1024
+    ) {
+      setCompressing(true);
+      try {
+        const compressed = await compressImageFile(selected);
+        const compressedSizeKb = Math.round(compressed.size / 1024);
+        const percentSaved = Math.round((1 - compressed.size / selected.size) * 100);
+        setFile(compressed);
+        if (percentSaved > 5) {
+          setCompressionNotice(
+            `Mobile optimization active: ${originalSizeKb} KB → ${compressedSizeKb} KB (${percentSaved}% faster upload)`,
+          );
+        } else {
+          setCompressionNotice(null);
+        }
+      } catch {
+        setFile(selected);
+        setCompressionNotice(null);
+      } finally {
+        setCompressing(false);
+      }
+    } else {
+      setFile(selected);
+      setCompressionNotice(null);
+    }
+  };
+
   return (
     <>
       <h1 className="text-2xl font-extrabold md:text-3xl">Add your initial documents</h1>
@@ -774,20 +956,32 @@ function Documents({
       <div className="mt-7 rounded-xl border-2 border-dashed border-border bg-secondary/30 p-5 text-center sm:p-7">
         <FileCheck2 className="mx-auto h-8 w-8 text-brand-green" />
         <p className="mt-3 font-bold">O’Level or ND result</p>
-        <p className="mt-1 text-xs text-muted-foreground">PDF, JPG or PNG, up to 10 MB</p>
-        <Label className="mt-5 inline-flex cursor-pointer rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold">
+        <p className="mt-1 text-xs text-muted-foreground">PDF, JPG, PNG or WebP, up to 10 MB</p>
+        <Label className="mt-5 inline-flex cursor-pointer rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold transition-colors hover:bg-secondary">
           <input
             type="file"
             className="sr-only"
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            accept=".pdf,.jpg,.jpeg,.png,.webp,image/*"
+            disabled={compressing}
+            onChange={(e) => void handleFileSelection(e.target.files?.[0] ?? null)}
           />
-          Choose file
+          {compressing ? (
+            <span className="flex items-center gap-2">
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Optimizing file…
+            </span>
+          ) : (
+            "Choose file"
+          )}
         </Label>
         {fileName && (
           <div className="mt-5 rounded-lg border border-border bg-background p-3 text-left text-sm">
-            <strong>{fileName}</strong>
-            <span className="block text-xs text-brand-green-dark">Ready to upload</span>
+            <strong className="block text-foreground">{fileName}</strong>
+            <span className="block text-xs font-bold text-brand-green-dark">Ready to upload</span>
+            {compressionNotice && (
+              <span className="mt-1 block text-[11px] font-medium text-muted-foreground">
+                {compressionNotice}
+              </span>
+            )}
           </div>
         )}
       </div>

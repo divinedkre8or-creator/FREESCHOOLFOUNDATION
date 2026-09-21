@@ -42,6 +42,7 @@ import {
   markMessageRead,
   uploadRequestedDocument,
 } from "@/lib/supabase/applications";
+import { compressImageFile } from "@/lib/image-compressor";
 import { seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/portal")({
@@ -175,7 +176,7 @@ function PortalPage() {
     try {
       const url = await getDocumentUrl(doc.storagePath);
       if (url) {
-        window.open(url, "_blank", "noopener,noreferrer");
+        setActiveDocUrl({ name: doc.name, url });
       }
     } catch {
       // Error opening
@@ -757,6 +758,54 @@ function PortalPage() {
           </div>
         </Panel>
       )}
+
+      {/* IN-PORTAL DOCUMENT VIEWER MODAL */}
+      {activeDocUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-5 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border bg-secondary/60 px-4 py-3 sm:px-6">
+              <div className="min-w-0 pr-3">
+                <p className="truncate text-sm font-bold text-foreground">{activeDocUrl.name}</p>
+                <p className="text-xs text-muted-foreground">Secured Applicant Credential</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 text-xs font-semibold"
+                  onClick={() => window.open(activeDocUrl.url, "_blank", "noopener,noreferrer")}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Open in New Tab
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 rounded-full font-bold text-muted-foreground hover:text-foreground"
+                  onClick={() => setActiveDocUrl(null)}
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-muted/20 p-2 sm:p-4 flex items-center justify-center">
+              {/\.(jpe?g|png|webp|gif)$/i.test(activeDocUrl.name) ||
+              !activeDocUrl.name.toLowerCase().endsWith(".pdf") ? (
+                <img
+                  src={activeDocUrl.url}
+                  alt={activeDocUrl.name}
+                  className="max-h-full max-w-full rounded-lg object-contain shadow-sm"
+                />
+              ) : (
+                <iframe
+                  src={activeDocUrl.url}
+                  title={activeDocUrl.name}
+                  className="h-full w-full rounded-lg border-0 bg-white"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </PortalLayout>
   );
 }
@@ -802,25 +851,30 @@ function LabelButton({ onFile }: { onFile: (file: File) => Promise<void> }) {
   const [error, setError] = useState("");
   return (
     <div className="w-full sm:w-auto sm:text-right">
-      <label className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg bg-brand-green px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-green-dark sm:w-auto">
+      <label className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg bg-brand-green px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-green-dark sm:w-auto transition-all">
         <Upload className="mr-2 h-4 w-4" />
         <input
           className="sr-only"
           type="file"
-          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/*"
           disabled={uploading}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (!file) return;
             setUploading(true);
             setError("");
-            void onFile(file)
-              .catch((uploadError: unknown) =>
+            void (async () => {
+              try {
+                const optimizedFile = await compressImageFile(file);
+                await onFile(optimizedFile);
+              } catch (uploadError: unknown) {
                 setError(
                   uploadError instanceof Error ? uploadError.message : "Upload failed. Try again.",
-                ),
-              )
-              .finally(() => setUploading(false));
+                );
+              } finally {
+                setUploading(false);
+              }
+            })();
           }}
         />
         {uploading ? "Uploading…" : "Upload Certificate"}

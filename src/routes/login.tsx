@@ -26,7 +26,7 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"signin" | "request-reset" | "update-password">("signin");
+  const [mode, setMode] = useState<"signin" | "magic-link" | "request-reset" | "update-password">("signin");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
@@ -37,6 +37,37 @@ function LoginPage() {
     });
     return () => data.subscription.unsubscribe();
   }, []);
+
+  const sendMagicLink = async () => {
+    if (!email.trim()) {
+      setError("Please enter your account email address.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setMessage("");
+    const supabase = getSupabaseBrowserClient();
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo:
+          typeof window !== "undefined" ? `${window.location.origin}/portal` : undefined,
+      },
+    });
+    setLoading(false);
+    if (otpError) {
+      if (otpError.message?.toLowerCase().includes("rate limit")) {
+        setError("Email rate limit reached. Please wait a moment or sign in with your password.");
+      } else {
+        setError(
+          otpError.message ||
+            "Could not send login link. Please verify your email or use password sign-in.",
+        );
+      }
+      return;
+    }
+    setMessage("✨ Instant login link sent! Check your inbox to sign in with one click.");
+  };
 
   const signIn = async () => {
     setLoading(true);
@@ -178,20 +209,60 @@ function LoginPage() {
           </div>
         </div>
         <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-lift sm:p-6 md:p-8">
-          <LockKeyhole className="h-7 w-7 text-brand-green" />
+          <div className="flex items-center justify-between">
+            <LockKeyhole className="h-7 w-7 text-brand-green" />
+            {mode !== "update-password" && (
+              <div className="flex rounded-lg bg-secondary p-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError("");
+                    setMessage("");
+                    setMode("signin");
+                  }}
+                  className={`rounded-md px-2.5 py-1 transition-colors ${
+                    mode === "signin"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError("");
+                    setMessage("");
+                    setMode("magic-link");
+                  }}
+                  className={`rounded-md px-2.5 py-1 transition-colors ${
+                    mode === "magic-link"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Magic Link
+                </button>
+              </div>
+            )}
+          </div>
           <h1 className="mt-5 text-2xl font-extrabold">
             {mode === "signin"
               ? "Applicant login"
-              : mode === "request-reset"
-                ? "Reset your password"
-                : "Create a new password"}
+              : mode === "magic-link"
+                ? "Passwordless sign-in"
+                : mode === "request-reset"
+                  ? "Reset your password"
+                  : "Create a new password"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {mode === "signin"
               ? "Use the email address and password connected to your scholarship application."
-              : mode === "request-reset"
-                ? "Enter your account email and we will send a secure reset link."
-                : "Choose a new password with at least 8 characters."}
+              : mode === "magic-link"
+                ? "Enter your account email and we will send a one-click login link to your inbox."
+                : mode === "request-reset"
+                  ? "Enter your account email and we will send a secure reset link."
+                  : "Choose a new password with at least 8 characters."}
           </p>
           {error && (
             <p
@@ -252,7 +323,9 @@ function LoginPage() {
               className="mt-6 space-y-5"
               onSubmit={(event) => {
                 event.preventDefault();
-                void (mode === "signin" ? signIn() : requestReset());
+                if (mode === "signin") void signIn();
+                else if (mode === "magic-link") void sendMagicLink();
+                else void requestReset();
               }}
             >
               <div className="space-y-2">
@@ -263,6 +336,7 @@ function LoginPage() {
                   type="email"
                   inputMode="email"
                   autoComplete="email"
+                  placeholder="applicant@example.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
@@ -284,30 +358,49 @@ function LoginPage() {
                   </>
                 )}
               </div>
-              <Button size="lg" className="w-full" type="submit" disabled={loading}>
+              <Button size="lg" className="w-full font-bold" type="submit" disabled={loading}>
                 {loading
                   ? mode === "signin"
                     ? "Signing in…"
-                    : "Sending reset email…"
+                    : mode === "magic-link"
+                      ? "Sending login link…"
+                      : "Sending reset email…"
                   : mode === "signin"
                     ? "Sign in securely"
-                    : "Send reset link"}
+                    : mode === "magic-link"
+                      ? "Send One-Click Login Link"
+                      : "Send reset link"}
                 {!loading && mode === "signin" && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
           )}
           {mode !== "update-password" && (
-            <button
-              type="button"
-              className="mt-4 w-full text-center text-sm font-semibold text-brand-green-dark"
-              onClick={() => {
-                setError("");
-                setMessage("");
-                setMode(mode === "signin" ? "request-reset" : "signin");
-              }}
-            >
-              {mode === "signin" ? "Forgot password?" : "Back to sign in"}
-            </button>
+            <div className="mt-4 flex items-center justify-between text-xs font-semibold text-brand-green-dark">
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setMessage("");
+                  setMode(mode === "request-reset" ? "signin" : "request-reset");
+                }}
+                className="hover:underline"
+              >
+                {mode === "request-reset" ? "← Back to sign in" : "Forgot password?"}
+              </button>
+              {mode !== "magic-link" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError("");
+                    setMessage("");
+                    setMode("magic-link");
+                  }}
+                  className="hover:underline"
+                >
+                  Sign in without password →
+                </button>
+              )}
+            </div>
           )}
           <p className="mt-6 text-center text-xs text-muted-foreground">
             Starting a new application?{" "}
