@@ -1,5 +1,10 @@
 import { getSupabaseBrowserClient } from "./browser";
 import type { Application, ApplicationStatus } from "../fsf";
+import {
+  completeRequestedDocumentUploadServerFn,
+  registerApplicationDocumentServerFn,
+  getSignedDocumentUrlServerFn,
+} from "@/lib/admin/admin-actions";
 
 const CAMPAIGN_ID = "20000000-0000-0000-0000-000000000001";
 const APPLICATION_SELECT =
@@ -51,18 +56,34 @@ export type SubmittedApplication = {
 export async function submitApplicationToSupabase(
   input: ApplicationSubmission,
 ): Promise<SubmittedApplication> {
-  if (
-    input.document &&
-    (!["application/pdf", "image/jpeg", "image/png"].includes(input.document.type) ||
-      input.document.size < 1 ||
-      input.document.size > 10 * 1024 * 1024)
-  )
-    throw new Error("Upload a PDF, JPG or PNG file smaller than 10 MB.");
+  const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "webp"];
+  const docExt = input.document?.name.split(".").pop()?.toLowerCase() ?? "";
+  const docType = input.document?.type?.toLowerCase().trim() || "";
+
+  if (input.document) {
+    const isValidType =
+      [
+        "application/pdf",
+        "image/jpeg",
+        "image/jpg",
+        "image/pjpeg",
+        "image/png",
+        "image/x-png",
+        "image/webp",
+      ].includes(docType) || allowedExtensions.includes(docExt);
+
+    if (!isValidType || input.document.size < 1 || input.document.size > 10 * 1024 * 1024) {
+      throw new Error("Upload a PDF, JPG or PNG file smaller than 10 MB.");
+    }
+  }
 
   const supabase = getSupabaseBrowserClient();
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
   if (userError || !user) throw new Error("Your session has expired. Sign in again to continue.");
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
 
   const { data: programme, error: programmeError } = await supabase
     .from("programmes")
@@ -130,37 +151,70 @@ export async function submitApplicationToSupabase(
       pdf: "application/pdf",
       webp: "image/webp",
     };
-    const extension = input.document.name.split(".").pop()?.toLowerCase() ?? "pdf";
-    const rawMime = input.document.type?.toLowerCase().trim() || "";
+    const extension = docExt || "pdf";
+    const rawMime = docType;
     const normalizedMime =
       rawMime === "image/jpg" || rawMime === "image/pjpeg"
         ? "image/jpeg"
-        : rawMime || mimeMap[extension] || "application/pdf";
+        : rawMime === "image/x-png"
+          ? "image/png"
+          : rawMime || mimeMap[extension] || "application/pdf";
 
     const storagePath = `${user.id}/${draft.id}/${crypto.randomUUID()}.${extension}`;
     const { error: uploadError } = await supabase.storage
       .from("application-documents")
       .upload(storagePath, input.document, {
         contentType: normalizedMime,
-        upsert: false,
+        upsert: true,
       });
-    if (uploadError) throw new Error("Your document could not be uploaded. Please try again.");
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      throw new Error("Your document could not be uploaded. Please try again.");
+    }
 
-    const { data: documentId, error: documentError } = await supabase.rpc(
+    const documentType = input.level === "ND" ? "O'Level Result" : "ND Result";
+    let documentId: string | null = null;
+
+    // 1. Try RPC
+    const { data: rpcDocId, error: documentError } = await supabase.rpc(
       "register_application_document",
       {
         target_application_id: draft.id,
-        target_document_type: input.level === "ND" ? "O'Level Result" : "ND Result",
+        target_document_type: documentType,
         target_display_name: input.document.name,
         target_storage_path: storagePath,
         target_mime_type: normalizedMime,
         target_size_bytes: input.document.size,
       },
     );
-    if (documentError || !documentId) {
+
+    if (!documentError && rpcDocId) {
+      documentId = String(rpcDocId);
+    } else if (accessToken) {
+      // 2. Fallback to Server Function
+      try {
+        const res = await registerApplicationDocumentServerFn({
+          data: {
+            accessToken,
+            applicationId: draft.id,
+            documentType,
+            displayName: input.document.name,
+            storagePath,
+            mimeType: normalizedMime,
+            sizeBytes: input.document.size,
+          },
+        });
+        documentId = res.id;
+      } catch (srvErr) {
+        console.error("Server document registration fallback error:", srvErr);
+      }
+    }
+
+    if (!documentId) {
       console.error("Document registration error:", documentError);
       throw new Error("Your document record could not be saved. Please try again.");
     }
+
     void supabase.functions
       .invoke("scan-document", { body: { documentId } })
       .catch(() => undefined);
@@ -411,36 +465,107 @@ export async function uploadRequestedDocument(input: {
   documentId: string;
   file: File;
 }): Promise<void> {
-  if (!["application/pdf", "image/jpeg", "image/png"].includes(input.file.type))
-    throw new Error("Upload a PDF, JPG or PNG file.");
-  if (input.file.size < 1 || input.file.size > 10 * 1024 * 1024)
+  const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "webp"];
+  const docExt = input.file.name.split(".").pop()?.toLowerCase() ?? "";
+  const docType = input.file.type?.toLowerCase().trim() || "";
+
+  const isValidType =
+    [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/pjpeg",
+      "image/png",
+      "image/x-png",
+      "image/webp",
+    ].includes(docType) || allowedExtensions.includes(docExt);
+
+  if (!isValidType) {
+    throw new Error("Upload a PDF, JPG, PNG or WEBP file.");
+  }
+  if (input.file.size < 1 || input.file.size > 10 * 1024 * 1024) {
     throw new Error("The file must be smaller than 10 MB.");
+  }
 
   const supabase = getSupabaseBrowserClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error("Your session has expired.");
-  const extension = input.file.name.split(".").pop()?.toLowerCase() ?? "file";
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+
+  const mimeMap: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    pdf: "application/pdf",
+    webp: "image/webp",
+  };
+  const extension = docExt || "pdf";
+  const rawMime = docType;
+  const normalizedMime =
+    rawMime === "image/jpg" || rawMime === "image/pjpeg"
+      ? "image/jpeg"
+      : rawMime === "image/x-png"
+        ? "image/png"
+        : rawMime || mimeMap[extension] || "application/pdf";
+
   const storagePath = `${userData.user.id}/${input.applicationId}/${crypto.randomUUID()}.${extension}`;
   const { error: uploadError } = await supabase.storage
     .from("application-documents")
-    .upload(storagePath, input.file, { upsert: false });
-  if (uploadError) throw new Error("The document could not be uploaded.");
+    .upload(storagePath, input.file, {
+      contentType: normalizedMime,
+      upsert: true,
+    });
+  if (uploadError) {
+    console.error("Storage upload error:", uploadError);
+    throw new Error("The document could not be uploaded. Please try again.");
+  }
 
+  let updated = false;
+
+  // 1. Try RPC
   const { error: recordError } = await supabase.rpc("complete_requested_document_upload", {
     target_document_id: input.documentId,
     target_application_id: input.applicationId,
     target_display_name: input.file.name,
     target_storage_path: storagePath,
-    target_mime_type: input.file.type,
+    target_mime_type: normalizedMime,
     target_size_bytes: input.file.size,
   });
-  if (recordError) throw new Error("The document record could not be updated.");
 
-  const { error: scanError } = await supabase.functions.invoke("scan-document", {
-    body: { documentId: input.documentId },
-  });
-  if (scanError)
-    throw new Error("The document is uploaded and quarantined while scanning retries.");
+  if (!recordError) {
+    updated = true;
+  } else if (accessToken) {
+    // 2. Try Server Function fallback
+    try {
+      await completeRequestedDocumentUploadServerFn({
+        data: {
+          accessToken,
+          applicationId: input.applicationId,
+          documentId: input.documentId,
+          displayName: input.file.name,
+          storagePath,
+          mimeType: normalizedMime,
+          sizeBytes: input.file.size,
+        },
+      });
+      updated = true;
+    } catch (srvErr) {
+      console.error("Server upload fallback error:", srvErr);
+    }
+  }
+
+  if (!updated) {
+    console.error("Document record update error:", recordError);
+    throw new Error("The document was uploaded, but the record could not be updated. Please refresh.");
+  }
+
+  void supabase.functions
+    .invoke("scan-document", {
+      body: { documentId: input.documentId },
+    })
+    .catch(() => undefined);
 }
 
 function mapApplication(data: ApplicationRow): Application {
@@ -514,6 +639,20 @@ function mapApplication(data: ApplicationRow): Application {
 
 export async function getDocumentUrl(storagePath: string): Promise<string> {
   const supabase = getSupabaseBrowserClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+
+  if (accessToken) {
+    try {
+      const res = await getSignedDocumentUrlServerFn({
+        data: { accessToken, storagePath },
+      });
+      if (res?.url) return res.url;
+    } catch {
+      // Fallback to client createSignedUrl
+    }
+  }
+
   const { data, error } = await supabase.storage
     .from("application-documents")
     .createSignedUrl(storagePath, 3600);

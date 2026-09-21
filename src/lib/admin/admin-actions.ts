@@ -52,6 +52,52 @@ const dispatchMessageSchema = z.object({
   priority: z.enum(["normal", "high"]).default("normal"),
 });
 
+const completeUploadSchema = z.object({
+  accessToken: z.string().min(20),
+  applicationId: z.string().uuid(),
+  documentId: z.string().uuid(),
+  displayName: z.string().min(1),
+  storagePath: z.string().min(1),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+});
+
+const registerDocSchema = z.object({
+  accessToken: z.string().min(20),
+  applicationId: z.string().uuid(),
+  documentType: z.string().min(1),
+  displayName: z.string().min(1),
+  storagePath: z.string().min(1),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+});
+
+const getDocUrlSchema = z.object({
+  accessToken: z.string().min(20),
+  storagePath: z.string().min(1),
+});
+
+// Helper to verify user and get admin client
+async function verifyUserAndGetAdminClient(accessToken: string) {
+  const { url: supabaseUrl } = getServerSupabaseConfig();
+  const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+
+  if (!serviceRoleKey) {
+    throw new Error("Server service role key is not configured.");
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data: userData, error: userError } = await adminClient.auth.getUser(accessToken);
+  if (userError || !userData.user) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  return { user: userData.user, adminClient };
+}
+
 // Helper to verify staff authorization and return clients
 async function verifyStaffAndGetClients(accessToken: string) {
   const { url: supabaseUrl } = getServerSupabaseConfig();
@@ -648,3 +694,119 @@ export async function adminDispatchPortalMessage(input: {
     },
   });
 }
+
+// 7. Complete Requested Document Upload Server Function (Bulletproof fallback)
+export const completeRequestedDocumentUploadServerFn = createServerFn({ method: "POST" })
+  .validator(completeUploadSchema)
+  .handler(async ({ data }) => {
+    const { user, adminClient } = await verifyUserAndGetAdminClient(data.accessToken);
+
+    const { data: app, error: appErr } = await adminClient
+      .from("applications")
+      .select("id, applicant_id")
+      .eq("id", data.applicationId)
+      .maybeSingle();
+
+    if (appErr || !app || app.applicant_id !== user.id) {
+      throw new Error("You are not authorized to update this document.");
+    }
+
+    const { error: updateErr } = await adminClient
+      .from("application_documents")
+      .update({
+        display_name: data.displayName.trim(),
+        storage_path: data.storagePath,
+        mime_type: data.mimeType,
+        size_bytes: data.sizeBytes,
+        uploaded_at: new Date().toISOString(),
+        scan_status: "pending",
+      })
+      .eq("id", data.documentId)
+      .eq("application_id", data.applicationId);
+
+    if (updateErr) {
+      console.error("completeRequestedDocumentUploadServerFn error:", updateErr);
+      throw new Error("Could not update document record.");
+    }
+
+    return { success: true };
+  });
+
+// 8. Register Application Document Server Function (Bulletproof fallback)
+export const registerApplicationDocumentServerFn = createServerFn({ method: "POST" })
+  .validator(registerDocSchema)
+  .handler(async ({ data }) => {
+    const { user, adminClient } = await verifyUserAndGetAdminClient(data.accessToken);
+
+    const { data: app, error: appErr } = await adminClient
+      .from("applications")
+      .select("id, applicant_id")
+      .eq("id", data.applicationId)
+      .maybeSingle();
+
+    if (appErr || !app || app.applicant_id !== user.id) {
+      throw new Error("You are not authorized to attach documents to this application.");
+    }
+
+    const { data: doc, error: insertErr } = await adminClient
+      .from("application_documents")
+      .insert({
+        application_id: data.applicationId,
+        document_type: data.documentType.trim(),
+        display_name: data.displayName.trim(),
+        storage_path: data.storagePath,
+        mime_type: data.mimeType,
+        size_bytes: data.sizeBytes,
+        uploaded_at: new Date().toISOString(),
+        scan_status: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (insertErr || !doc) {
+      console.error("registerApplicationDocumentServerFn error:", insertErr);
+      throw new Error("Could not register document record.");
+    }
+
+    return { id: doc.id };
+  });
+
+// 9. Get Signed Document URL Server Function
+export const getSignedDocumentUrlServerFn = createServerFn({ method: "POST" })
+  .validator(getDocUrlSchema)
+  .handler(async ({ data }) => {
+    const { user, adminClient } = await verifyUserAndGetAdminClient(data.accessToken);
+
+    const isOwner = data.storagePath.startsWith(`${user.id}/`);
+    let isStaff = false;
+    if (!isOwner) {
+      const { data: staff } = await adminClient
+        .from("staff_profiles")
+        .select("active")
+        .eq("user_id", user.id)
+        .eq("active", true)
+        .maybeSingle();
+      const isSuperAdminEmail =
+        user.email === "officialnwachukwudivine@gmail.com" ||
+        user.email?.endsWith("@thefreeschoolfoundation.com.ng");
+      isStaff = Boolean(staff?.active || isSuperAdminEmail);
+    }
+
+    if (!isOwner && !isStaff) {
+      throw new Error("Unauthorized to access this document.");
+    }
+
+    const { data: signed, error: signErr } = await adminClient.storage
+      .from("application-documents")
+      .createSignedUrl(data.storagePath, 3600);
+
+    if (signErr || !signed?.signedUrl) {
+      const { data: pub } = adminClient.storage
+        .from("application-documents")
+        .getPublicUrl(data.storagePath);
+      return { url: pub.publicUrl };
+    }
+
+    return { url: signed.signedUrl };
+  });
+

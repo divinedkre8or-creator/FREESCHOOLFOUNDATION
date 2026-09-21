@@ -119,13 +119,105 @@ BEGIN
 END;
 $$;
 
--- 4. Permissions & Grants
+-- 4. Function: Register Initial Application Document (Draft stage)
+CREATE OR REPLACE FUNCTION public.register_application_document(
+  target_application_id uuid,
+  target_document_type text,
+  target_display_name text,
+  target_storage_path text,
+  target_mime_type text,
+  target_size_bytes bigint
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  created_id uuid;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.applications application
+    WHERE application.id = target_application_id
+      AND application.applicant_id = (SELECT auth.uid())
+      AND application.status = 'draft'
+  ) THEN
+    RAISE EXCEPTION 'draft_application_required' USING errcode = '42501';
+  END IF;
+
+  IF target_mime_type NOT IN ('application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp')
+     OR target_size_bytes NOT BETWEEN 1 AND 10485760
+     OR target_storage_path NOT LIKE (SELECT auth.uid())::text || '/' || target_application_id::text || '/%'
+     OR char_length(trim(target_document_type)) NOT BETWEEN 1 AND 120
+     OR char_length(trim(target_display_name)) NOT BETWEEN 1 AND 255 THEN
+    RAISE EXCEPTION 'invalid_document_metadata' USING errcode = '22023';
+  END IF;
+
+  INSERT INTO public.application_documents(
+    application_id, document_type, display_name, storage_path, mime_type,
+    size_bytes, uploaded_at, scan_status
+  ) VALUES (
+    target_application_id, trim(target_document_type), trim(target_display_name),
+    target_storage_path, target_mime_type, target_size_bytes, now(), 'pending'
+  ) RETURNING id INTO created_id;
+
+  RETURN created_id;
+END;
+$$;
+
+-- 5. Function: Complete Requested Document Upload
+CREATE OR REPLACE FUNCTION public.complete_requested_document_upload(
+  target_document_id uuid,
+  target_application_id uuid,
+  target_display_name text,
+  target_storage_path text,
+  target_mime_type text,
+  target_size_bytes bigint
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF target_mime_type NOT IN ('application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp')
+     OR target_size_bytes NOT BETWEEN 1 AND 10485760
+     OR target_storage_path NOT LIKE (SELECT auth.uid())::text || '/' || target_application_id::text || '/%'
+     OR char_length(trim(target_display_name)) NOT BETWEEN 1 AND 255 THEN
+    RAISE EXCEPTION 'invalid_document_metadata' USING errcode = '22023';
+  END IF;
+
+  UPDATE public.application_documents document
+  SET display_name = trim(target_display_name),
+      storage_path = target_storage_path,
+      mime_type = target_mime_type,
+      size_bytes = target_size_bytes,
+      uploaded_at = now(),
+      scan_status = 'pending'
+  FROM public.applications application
+  WHERE document.id = target_document_id
+    AND document.application_id = target_application_id
+    AND document.requested_at IS NOT NULL
+    AND application.id = document.application_id
+    AND application.applicant_id = (SELECT auth.uid());
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'document_request_not_found' USING errcode = 'P0002';
+  END IF;
+END;
+$$;
+
+-- 6. Permissions & Grants
 REVOKE ALL ON FUNCTION public.list_registered_users() FROM public;
-GRANT EXECUTE ON FUNCTION public.list_registered_users() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.list_registered_users() TO service_role;
+GRANT EXECUTE ON FUNCTION public.list_registered_users() TO authenticated, service_role;
 
 REVOKE ALL ON FUNCTION public.verify_application_document(uuid, uuid, text, text) FROM public;
-GRANT EXECUTE ON FUNCTION public.verify_application_document(uuid, uuid, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.verify_application_document(uuid, uuid, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.verify_application_document(uuid, uuid, text, text) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.register_application_document(uuid, text, text, text, text, bigint) FROM public;
+GRANT EXECUTE ON FUNCTION public.register_application_document(uuid, text, text, text, text, bigint) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.complete_requested_document_upload(uuid, uuid, text, text, text, bigint) FROM public;
+GRANT EXECUTE ON FUNCTION public.complete_requested_document_upload(uuid, uuid, text, text, text, bigint) TO authenticated, service_role;
 
 COMMIT;
