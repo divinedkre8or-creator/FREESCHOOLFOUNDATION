@@ -27,6 +27,7 @@ import { Route as AdminApplicantsRouteImport } from './routes/admin.applicants'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminCommunicationsRouteImport } from './routes/admin.communications'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
+import { Route as AdminApplicantsIndexRouteImport } from './routes/admin.applicants.index'
 import { Route as AdminApplicantsApplicationIdRouteImport } from './routes/admin.applicants.$applicationId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -119,6 +120,11 @@ const AdminStaffRoute = AdminStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminApplicantsIndexRoute = AdminApplicantsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminApplicantsRoute,
+} as any)
 const AdminApplicantsApplicationIdRoute =
   AdminApplicantsApplicationIdRouteImport.update({
     id: '/$applicationId',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/applicants/$applicationId': typeof AdminApplicantsApplicationIdRoute
+  '/admin/applicants/': typeof AdminApplicantsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -160,12 +167,12 @@ export interface FileRoutesByTo {
   '/programmes': typeof ProgrammesRoute
   '/scholarship': typeof ScholarshipRoute
   '/terms': typeof TermsRoute
-  '/admin/applicants': typeof AdminApplicantsRouteWithChildren
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/communications': typeof AdminCommunicationsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin': typeof AdminIndexRoute
   '/admin/applicants/$applicationId': typeof AdminApplicantsApplicationIdRoute
+  '/admin/applicants': typeof AdminApplicantsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +195,7 @@ export interface FileRoutesById {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/applicants/$applicationId': typeof AdminApplicantsApplicationIdRoute
+  '/admin/applicants/': typeof AdminApplicantsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +219,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/'
     | '/admin/applicants/$applicationId'
+    | '/admin/applicants/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -225,12 +234,12 @@ export interface FileRouteTypes {
     | '/programmes'
     | '/scholarship'
     | '/terms'
-    | '/admin/applicants'
     | '/admin/campaigns'
     | '/admin/communications'
     | '/admin/staff'
     | '/admin'
     | '/admin/applicants/$applicationId'
+    | '/admin/applicants'
   id:
     | '__root__'
     | '/'
@@ -252,6 +261,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/'
     | '/admin/applicants/$applicationId'
+    | '/admin/applicants/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -398,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStaffRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/applicants/': {
+      id: '/admin/applicants/'
+      path: '/'
+      fullPath: '/admin/applicants/'
+      preLoaderRoute: typeof AdminApplicantsIndexRouteImport
+      parentRoute: typeof AdminApplicantsRoute
+    }
     '/admin/applicants/$applicationId': {
       id: '/admin/applicants/$applicationId'
       path: '/$applicationId'
@@ -410,10 +427,12 @@ declare module '@tanstack/react-router' {
 
 interface AdminApplicantsRouteChildren {
   AdminApplicantsApplicationIdRoute: typeof AdminApplicantsApplicationIdRoute
+  AdminApplicantsIndexRoute: typeof AdminApplicantsIndexRoute
 }
 
 const AdminApplicantsRouteChildren: AdminApplicantsRouteChildren = {
   AdminApplicantsApplicationIdRoute: AdminApplicantsApplicationIdRoute,
+  AdminApplicantsIndexRoute: AdminApplicantsIndexRoute,
 }
 
 const AdminApplicantsRouteWithChildren = AdminApplicantsRoute._addFileChildren(

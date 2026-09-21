@@ -69,6 +69,7 @@ function ApplicantProfile() {
   const { applications, setState } = useStore();
   const application = applications.find((item) => item.id === applicationId);
 
+  const [loadingInitial, setLoadingInitial] = useState(!application);
   const [status, setStatus] = useState<ApplicationStatus>(application?.status ?? "Submitted");
   const [statusMessage, setStatusMessage] = useState("");
   const [note, setNote] = useState("");
@@ -80,6 +81,29 @@ function ApplicantProfile() {
   const [feedback, setFeedback] = useState("");
   const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   const [updatingDocId, setUpdatingDocId] = useState<string | null>(null);
+
+  // Sync state if application loads after initial render
+  useEffect(() => {
+    let active = true;
+    if (!application) {
+      setLoadingInitial(true);
+      void loadAdminApplications()
+        .then((refreshed) => {
+          if (active) {
+            setState((state) => ({ ...state, applications: refreshed }));
+          }
+        })
+        .finally(() => {
+          if (active) setLoadingInitial(false);
+        });
+    } else {
+      setLoadingInitial(false);
+      setStatus(application.status);
+    }
+    return () => {
+      active = false;
+    };
+  }, [applicationId, application?.status]);
 
   // B1: Processing Checklist (session-only, resets on page load)
   const [checklist, setChecklist] = useState({
@@ -182,6 +206,15 @@ function ApplicantProfile() {
       setOpeningDocId(null);
     }
   };
+
+  if (loadingInitial) {
+    return (
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-3">
+        <LoaderCircle className="h-8 w-8 animate-spin text-brand-green" />
+        <p className="text-sm font-semibold text-muted-foreground">Loading applicant profile…</p>
+      </div>
+    );
+  }
 
   if (!application)
     return (
