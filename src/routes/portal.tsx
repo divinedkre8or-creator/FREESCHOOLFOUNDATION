@@ -87,7 +87,7 @@ function getStageIndex(status: ApplicationStatus): number {
 function PortalPage() {
   const [section, setSection] = useState<PortalSection>("overview");
   const [loading, setLoading] = useState(true);
-  const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string | undefined } | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeDocUrl, setActiveDocUrl] = useState<{ name: string; url: string } | null>(null);
@@ -100,12 +100,12 @@ function PortalPage() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    void supabase.auth.getUser().then(({ data }) => {
-      setAuthUser(data.user ? { id: data.user.id, email: data.user.email } : null);
+    void supabase.auth.getUser().then((res: { data: { user: { id: string; email?: string | null } | null } }) => {
+      setAuthUser(res.data.user ? { id: res.data.user.id, email: res.data.user.email ?? undefined } : null);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: unknown, session: { user?: { id: string; email?: string | null } } | null) => {
+      setAuthUser(session?.user ? { id: session.user.id, email: session.user.email ?? undefined } : null);
     });
 
     return () => authListener.subscription.unsubscribe();
