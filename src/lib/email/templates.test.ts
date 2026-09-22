@@ -26,4 +26,22 @@ describe("buildPlatformEmail", () => {
     expect(email.subject).toBe("Interview update");
     expect(email.text).toContain("Open the portal for details.");
   });
+
+  it("renders a reminder email with custom action url and button text", () => {
+    const email = buildPlatformEmail({
+      event: "reminder",
+      firstName: "Chidi",
+      subject: "Reminder: Finish your scholarship application",
+      body: "Applications close soon. Complete your submission today.",
+      portalUrl: "https://example.com/portal",
+      actionUrl: "https://example.com/apply",
+      actionText: "Complete Application Now",
+    });
+    expect(email.subject).toBe("Reminder: Finish your scholarship application");
+    expect(email.html).toContain("Hello Chidi,");
+    expect(email.html).toContain("Applications close soon.");
+    expect(email.html).toContain('href="https://example.com/apply"');
+    expect(email.html).toContain("Complete Application Now");
+    expect(email.text).toContain("Complete Application Now: https://example.com/apply");
+  });
 });

@@ -14,6 +14,7 @@ import {
   Mail,
   RotateCcw,
   Search,
+  Send,
   UserCheck,
   Users,
   UserX,
@@ -21,6 +22,7 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { PROGRAMMES, STATUSES, formatDate, fullName } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
 import {
@@ -28,6 +30,7 @@ import {
   loadRegisteredUsers,
   type RegisteredUser,
 } from "@/lib/supabase/applications";
+import { sendRegisteredUsersEmail } from "@/lib/email/platform-email";
 
 export const Route = createFileRoute("/admin/applicants/")({
   component: ApplicantsPage,
@@ -38,6 +41,14 @@ function ApplicantsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"applications" | "registered">("applications");
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [registeredFilter, setRegisteredFilter] = useState<"all" | "unapplied" | "drafts" | "submitted">("all");
+  const [selectedRegUserIds, setSelectedRegUserIds] = useState<string[]>([]);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [reminderTargetUsers, setReminderTargetUsers] = useState<RegisteredUser[]>([]);
+  const [reminderSubject, setReminderSubject] = useState("");
+  const [reminderBody, setReminderBody] = useState("");
+  const [reminderSending, setReminderSending] = useState(false);
+  const [reminderFeedback, setReminderFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedEmails, setCopiedEmails] = useState(false);
   const [query, setQuery] = useState("");
@@ -80,6 +91,10 @@ function ApplicantsPage() {
         .length,
       docsNeeded: applications.filter((a) => a.status === "Additional Documents Required").length,
       registeredCount: registeredUsers.length,
+      unappliedCount: registeredUsers.filter(
+        (u) => !u.hasApplication || u.applicationStatus === "registered_only",
+      ).length,
+      draftsCount: registeredUsers.filter((u) => u.applicationStatus === "draft").length,
     };
   }, [applications, registeredUsers]);
 
@@ -102,10 +117,27 @@ function ApplicantsPage() {
 
   const filteredRegistered = useMemo(() => {
     return registeredUsers.filter((user) => {
-      const haystack = `${user.firstName || ""} ${user.lastName || ""} ${user.email} ${user.phone || ""} ${user.applicationNumber || ""}`.toLowerCase();
-      return haystack.includes(query.toLowerCase());
+      const haystack =
+        `${user.firstName || ""} ${user.lastName || ""} ${user.email} ${user.phone || ""} ${user.applicationNumber || ""}`.toLowerCase();
+      const matchesQuery = haystack.includes(query.toLowerCase());
+      if (!matchesQuery) return false;
+
+      if (registeredFilter === "unapplied") {
+        return !user.hasApplication || user.applicationStatus === "registered_only";
+      }
+      if (registeredFilter === "drafts") {
+        return user.applicationStatus === "draft";
+      }
+      if (registeredFilter === "submitted") {
+        return (
+          user.hasApplication &&
+          user.applicationStatus !== "registered_only" &&
+          user.applicationStatus !== "draft"
+        );
+      }
+      return true;
     });
-  }, [registeredUsers, query]);
+  }, [registeredUsers, query, registeredFilter]);
 
   const toggle = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -122,6 +154,78 @@ function ApplicantsPage() {
         ? current.filter((id) => !filteredIds.includes(id))
         : [...new Set([...current, ...filteredIds])],
     );
+  };
+
+  const toggleRegUser = (userId: string) => {
+    setSelectedRegUserIds((current) =>
+      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId],
+    );
+  };
+
+  const toggleAllFilteredRegUsers = () => {
+    const filteredIds = filteredRegistered.map((u) => u.userId);
+    const allSelected = filteredIds.every((id) => selectedRegUserIds.includes(id));
+    setSelectedRegUserIds((current) =>
+      allSelected
+        ? current.filter((id) => !filteredIds.includes(id))
+        : [...new Set([...current, ...filteredIds])],
+    );
+  };
+
+  const openReminderModal = (targets: RegisteredUser[]) => {
+    if (targets.length === 0) return;
+    setReminderTargetUsers(targets);
+    setReminderFeedback(null);
+
+    const hasDrafts = targets.some((u) => u.applicationStatus === "draft");
+    const hasUnapplied = targets.some((u) => !u.hasApplication || u.applicationStatus === "registered_only");
+
+    if (hasDrafts && !hasUnapplied) {
+      setReminderSubject("Reminder: Finish and submit your scholarship application");
+      setReminderBody(
+        "Hello,\n\nYour scholarship application is currently saved as a draft. Please complete and submit all required sections before the application deadline.\n\nApplying is 100% free of charge.",
+      );
+    } else {
+      setReminderSubject("Complete your Free School Foundation scholarship application");
+      setReminderBody(
+        "Hello,\n\nWe noticed you registered on the Free School Foundation scholarship portal but haven't submitted your application yet.\n\nScholarship applications are open and 100% free of charge. Please click below to complete your application today.",
+      );
+    }
+    setReminderModalOpen(true);
+  };
+
+  const handleSendReminder = async () => {
+    if (!reminderSubject.trim() || !reminderBody.trim() || reminderTargetUsers.length === 0) return;
+    setReminderSending(true);
+    setReminderFeedback(null);
+
+    try {
+      const userIds = reminderTargetUsers.map((u) => u.userId);
+      const count = await sendRegisteredUsersEmail({
+        userIds,
+        subject: reminderSubject.trim(),
+        body: reminderBody.trim(),
+        actionUrl: `${window.location.origin}/apply`,
+        actionText: "Complete Scholarship Application",
+      });
+
+      setReminderFeedback({
+        type: "success",
+        text: `Successfully sent email reminder to ${count} candidate${count === 1 ? "" : "s"}.`,
+      });
+      setSelectedRegUserIds([]);
+      setTimeout(() => {
+        setReminderModalOpen(false);
+        setReminderFeedback(null);
+      }, 2500);
+    } catch (err) {
+      setReminderFeedback({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to send email reminders.",
+      });
+    } finally {
+      setReminderSending(false);
+    }
   };
 
   const exportPhones = () => {
@@ -495,9 +599,9 @@ function ApplicantsPage() {
         </section>
       ) : (
         <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-          {/* Search for Registered Users */}
-          <div className="border-b border-border p-4">
-            <div className="relative max-w-md">
+          {/* Header toolbar with filters and action buttons */}
+          <div className="flex flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative max-w-md flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 className="h-10 pl-9 text-sm"
@@ -506,12 +610,121 @@ function ApplicantsPage() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {stats.unappliedCount > 0 && (
+                <Button
+                  size="sm"
+                  className="h-10 gap-1.5 bg-brand-orange text-white hover:bg-brand-orange/90 font-bold"
+                  onClick={() => {
+                    const unapplied = registeredUsers.filter(
+                      (u) => !u.hasApplication || u.applicationStatus === "registered_only",
+                    );
+                    openReminderModal(unapplied);
+                  }}
+                >
+                  <Mail className="h-4 w-4" /> Remind All Unapplied ({stats.unappliedCount})
+                </Button>
+              )}
+
+              {selectedRegUserIds.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-10 gap-1.5 border-brand-green-dark text-brand-green-dark hover:bg-brand-green-soft font-bold"
+                  onClick={() => {
+                    const selected = registeredUsers.filter((u) =>
+                      selectedRegUserIds.includes(u.userId),
+                    );
+                    openReminderModal(selected);
+                  }}
+                >
+                  <Mail className="h-4 w-4" /> Email Selected ({selectedRegUserIds.length})
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 gap-1.5"
+                onClick={() => {
+                  const emails = filteredRegistered.map((u) => u.email).join("; ");
+                  void navigator.clipboard.writeText(emails);
+                  setCopiedEmails(true);
+                  setTimeout(() => setCopiedEmails(false), 2000);
+                }}
+              >
+                {copiedEmails ? (
+                  <>
+                    <Check className="h-4 w-4 text-emerald-600" /> Copied ({filteredRegistered.length})
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" /> Copy Emails
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
-          <div className="border-b border-border bg-secondary/20 px-5 py-3 text-xs text-muted-foreground">
+          {/* Sub-filter tabs */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-border bg-secondary/15 px-4 py-2 text-xs">
+            <span className="font-semibold text-muted-foreground mr-1">Filter:</span>
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                registeredFilter === "all"
+                  ? "bg-foreground text-background"
+                  : "bg-background text-muted-foreground hover:bg-secondary/40"
+              }`}
+              onClick={() => setRegisteredFilter("all")}
+            >
+              All ({registeredUsers.length})
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                registeredFilter === "unapplied"
+                  ? "bg-brand-orange text-white"
+                  : "bg-background text-muted-foreground hover:bg-secondary/40"
+              }`}
+              onClick={() => setRegisteredFilter("unapplied")}
+            >
+              Not Applied Yet ({stats.unappliedCount})
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                registeredFilter === "drafts"
+                  ? "bg-amber-600 text-white"
+                  : "bg-background text-muted-foreground hover:bg-secondary/40"
+              }`}
+              onClick={() => setRegisteredFilter("drafts")}
+            >
+              Drafts ({stats.draftsCount})
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                registeredFilter === "submitted"
+                  ? "bg-brand-green-dark text-white"
+                  : "bg-background text-muted-foreground hover:bg-secondary/40"
+              }`}
+              onClick={() => setRegisteredFilter("submitted")}
+            >
+              Submitted ({registeredUsers.length - stats.unappliedCount - stats.draftsCount})
+            </button>
+          </div>
+
+          <div className="border-b border-border bg-secondary/10 px-5 py-2.5 text-xs text-muted-foreground flex items-center justify-between">
             <span className="font-medium">
-              Found {filteredRegistered.length} registered candidate account{filteredRegistered.length === 1 ? "" : "s"}
+              Showing {filteredRegistered.length} registered candidate account{filteredRegistered.length === 1 ? "" : "s"}
             </span>
+            {selectedRegUserIds.length > 0 && (
+              <span className="font-bold text-brand-orange">
+                {selectedRegUserIds.length} candidate{selectedRegUserIds.length === 1 ? "" : "s"} selected
+              </span>
+            )}
           </div>
 
           {filteredRegistered.length === 0 ? (
@@ -519,105 +732,276 @@ function ApplicantsPage() {
               <Users className="mx-auto h-8 w-8 text-muted-foreground" />
               <h2 className="mt-4 text-base font-bold">No registered accounts found</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                All created accounts will appear here along with their application progress.
+                Try adjusting your search query or filter criteria.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-sm">
+              <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-secondary/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   <tr>
+                    <th className="w-10 px-4 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all registered users"
+                        className="h-4 w-4 rounded border-input text-brand-green-dark"
+                        checked={
+                          filteredRegistered.length > 0 &&
+                          filteredRegistered.every((u) => selectedRegUserIds.includes(u.userId))
+                        }
+                        onChange={toggleAllFilteredRegUsers}
+                      />
+                    </th>
                     <th className="px-5 py-3">Account Email</th>
                     <th className="px-5 py-3">Applicant Name</th>
                     <th className="px-5 py-3">Contact Phone</th>
                     <th className="px-5 py-3">Email Status</th>
                     <th className="px-5 py-3">Application Status</th>
                     <th className="px-5 py-3">Registered Date</th>
-                    <th className="w-28 px-5 py-3 text-right">Action</th>
+                    <th className="w-36 px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredRegistered.map((user) => (
-                    <tr key={user.userId} className="transition-colors hover:bg-secondary/40">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-mono text-xs font-semibold text-foreground">
-                            {user.email}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 font-bold text-foreground">
-                        {user.firstName || user.lastName
-                          ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                          : "Not provided yet"}
-                      </td>
-                      <td className="px-5 py-4 text-xs font-medium text-muted-foreground">
-                        {user.phone || "—"}
-                      </td>
-                      <td className="px-5 py-4">
-                        {user.emailConfirmed ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
-                            <UserCheck className="h-3 w-3" /> Confirmed
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700">
-                            <UserX className="h-3 w-3" /> Unconfirmed
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="capitalize text-xs font-semibold">
-                          {user.applicationStatus === "submitted"
-                            ? "Submitted"
-                            : user.applicationStatus === "draft"
-                              ? "Draft in progress"
-                              : "Registered (No Draft)"}
-                        </span>
-                        {user.applicationNumber && (
-                          <p className="font-mono text-[11px] text-brand-orange">
-                            {user.applicationNumber}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-xs font-medium text-muted-foreground">
-                        {formatDate(user.registeredAt)}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {user.applicationId ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1 text-xs font-bold text-brand-green-dark hover:bg-brand-green-soft"
-                            onClick={() =>
-                              void navigate({
-                                to: "/admin/applicants/$applicationId",
-                                params: { applicationId: user.applicationId! },
-                              })
-                            }
+                  {filteredRegistered.map((user) => {
+                    const isSelected = selectedRegUserIds.includes(user.userId);
+                    const isUnappliedOrDraft =
+                      !user.hasApplication ||
+                      user.applicationStatus === "registered_only" ||
+                      user.applicationStatus === "draft";
+
+                    return (
+                      <tr
+                        key={user.userId}
+                        className={`transition-colors hover:bg-secondary/40 ${
+                          isSelected ? "bg-brand-green-soft/30" : ""
+                        }`}
+                      >
+                        <td className="px-4 py-4 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select candidate ${user.email}`}
+                            className="h-4 w-4 rounded border-input text-brand-green-dark"
+                            checked={isSelected}
+                            onChange={() => toggleRegUser(user.userId)}
+                          />
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="font-mono text-xs font-semibold text-foreground">
+                              {user.email}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-bold text-foreground">
+                          {user.firstName || user.lastName
+                            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                            : "Not provided yet"}
+                        </td>
+                        <td className="px-5 py-4 text-xs font-medium text-muted-foreground">
+                          {user.phone || "—"}
+                        </td>
+                        <td className="px-5 py-4">
+                          {user.emailConfirmed ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                              <UserCheck className="h-3 w-3" /> Confirmed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                              <UserX className="h-3 w-3" /> Unconfirmed
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                              user.applicationStatus === "submitted"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : user.applicationStatus === "draft"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-secondary text-muted-foreground"
+                            }`}
                           >
-                            <Eye className="h-3.5 w-3.5" /> Inspect
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1 text-xs"
-                            onClick={() => {
-                              void navigator.clipboard.writeText(user.email);
-                            }}
-                          >
-                            <Copy className="h-3 w-3" /> Copy
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                            {user.applicationStatus === "submitted"
+                              ? "Submitted"
+                              : user.applicationStatus === "draft"
+                                ? "Draft in progress"
+                                : "Registered (No Draft)"}
+                          </span>
+                          {user.applicationNumber && (
+                            <p className="font-mono text-[11px] text-brand-orange mt-0.5">
+                              {user.applicationNumber}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-xs font-medium text-muted-foreground">
+                          {formatDate(user.registeredAt)}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isUnappliedOrDraft && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1 text-xs font-semibold text-brand-orange border-brand-orange/40 hover:bg-brand-orange-soft"
+                                onClick={() => openReminderModal([user])}
+                                title="Send reminder email to apply"
+                              >
+                                <Mail className="h-3.5 w-3.5" /> Remind
+                              </Button>
+                            )}
+
+                            {user.applicationId ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1 text-xs font-bold text-brand-green-dark hover:bg-brand-green-soft"
+                                onClick={() =>
+                                  void navigate({
+                                    to: "/admin/applicants/$applicationId",
+                                    params: { applicationId: user.applicationId! },
+                                  })
+                                }
+                              >
+                                <Eye className="h-3.5 w-3.5" /> Inspect
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1 text-xs text-muted-foreground"
+                                onClick={() => {
+                                  void navigator.clipboard.writeText(user.email);
+                                }}
+                                title="Copy Email"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </section>
+      )}
+
+      {/* Reminder Composer Modal */}
+      {reminderModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-brand-orange-soft p-2 text-brand-orange">
+                  <Mail className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-foreground">
+                    Send Application Reminder Email
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Targeting <strong>{reminderTargetUsers.length}</strong> registered candidate
+                    {reminderTargetUsers.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={reminderSending}
+                onClick={() => setReminderModalOpen(false)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div className="max-h-24 overflow-y-auto rounded-lg border border-border bg-secondary/30 p-2.5 text-xs">
+                <span className="font-semibold text-foreground">Recipients: </span>
+                <span className="text-muted-foreground">
+                  {reminderTargetUsers
+                    .map((u) => u.firstName ? `${u.firstName} (${u.email})` : u.email)
+                    .join(", ")}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Email Subject
+                </label>
+                <Input
+                  className="mt-1 h-10 text-sm font-normal"
+                  maxLength={180}
+                  value={reminderSubject}
+                  onChange={(e) => setReminderSubject(e.target.value)}
+                  placeholder="Subject line"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Message Content
+                </label>
+                <Textarea
+                  className="mt-1 min-h-32 text-sm font-normal"
+                  maxLength={5000}
+                  value={reminderBody}
+                  onChange={(e) => setReminderBody(e.target.value)}
+                  placeholder="Message content"
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  The email will include a prominent button linking directly to the application form.
+                </p>
+              </div>
+
+              {reminderFeedback && (
+                <div
+                  className={`rounded-lg p-3 text-xs font-bold ${
+                    reminderFeedback.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      : "bg-destructive/10 text-destructive border border-destructive/20"
+                  }`}
+                >
+                  {reminderFeedback.text}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+                <Button
+                  variant="outline"
+                  disabled={reminderSending}
+                  onClick={() => setReminderModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold"
+                  disabled={
+                    reminderSending ||
+                    !reminderSubject.trim() ||
+                    !reminderBody.trim() ||
+                    reminderTargetUsers.length === 0
+                  }
+                  onClick={() => void handleSendReminder()}
+                >
+                  <Send className="mr-1.5 h-4 w-4" />
+                  {reminderSending
+                    ? "Delivering emails…"
+                    : `Send to ${reminderTargetUsers.length} user${reminderTargetUsers.length === 1 ? "" : "s"}`}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
