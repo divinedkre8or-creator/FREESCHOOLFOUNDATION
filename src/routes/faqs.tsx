@@ -14,7 +14,7 @@ import { breadcrumbSchema, seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/faqs")({
   head: () =>
     seoHead({
-      title: "ND & HND Scholarship FAQs | The Free School Foundation",
+      title: "OND Scholarship FAQs | The Free School Foundation",
       description:
         "Get clear answers about scholarship eligibility, required documents, fees, deadlines, distance learning, applications and selection decisions.",
       path: "/faqs",

@@ -38,7 +38,7 @@ type ApplicationRow = {
 };
 
 export type ApplicationSubmission = {
-  level: "ND" | "HND";
+  level: "ND";
   programme: string;
   personal: Record<string, unknown>;
   education: Record<string, unknown>;
@@ -585,7 +585,7 @@ function mapApplication(data: ApplicationRow): Application {
     ...(data.submitted_at ? { submittedAt: data.submitted_at } : {}),
     status: STATUS_MAP[data.status] ?? (data.status === "draft" ? "Draft" : "Submitted"),
     campaign: "Citi Polytechnic ODL Scholarship 2026",
-    level: String(data.level || "ND").toUpperCase() as "ND" | "HND",
+    level: "ND",
     programme: (programmeRelation?.name ?? "Computer Science") as Application["programme"],
     personal,
     education,

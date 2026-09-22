@@ -10,9 +10,9 @@ import { breadcrumbSchema, seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/scholarship")({
   head: () =>
     seoHead({
-      title: "100% Funded ND & HND Scholarship | The Free School Foundation",
+      title: "100% Funded OND Scholarship | The Free School Foundation",
       description:
-        "Learn what the Open Distance Learning (ODL) scholarship covers, who can apply, the required documents, available ND and HND programmes, and how to apply online.",
+        "Learn what the Open Distance Learning (ODL) scholarship covers, who can apply, the required documents, available OND programmes, and how to apply online.",
       path: "/scholarship",
       scripts: [
         {
@@ -35,7 +35,7 @@ function ScholarshipPage() {
       <PageHero
         eyebrow="Current scholarship"
         title="Open Distance Learning (ODL) Scholarship"
-        description="A 100% full scholarship covering tuition for ND and HND programmes, funded by The Free School Foundation with accredited partner Citi Polytechnic Abuja."
+        description="A 100% full scholarship covering tuition for Ordinary National Diploma (OND) programmes, funded by The Free School Foundation with accredited partner Citi Polytechnic Abuja."
       />
 
       <section className="section-y">
@@ -44,7 +44,7 @@ function ScholarshipPage() {
             <h2 className="text-2xl font-extrabold">What the scholarship covers</h2>
             <ul className="mt-5 space-y-3">
               {[
-                "100% of tuition for the full ND or HND programme",
+                "100% of tuition for the full OND programme",
                 "No application fee at any stage",
                 "Access to Open Distance Learning (ODL) study materials and faculty support",
                 "Structured physical orientation and support from the Foundation office in Aba",
@@ -74,20 +74,18 @@ function ScholarshipPage() {
             </ol>
 
             <h2 className="mt-12 text-2xl font-extrabold">Who can apply</h2>
-            <div className="mt-5 grid gap-6 sm:grid-cols-2">
-              {(["ND", "HND"] as const).map((level) => (
-                <div key={level} className="rounded-2xl border border-border p-6">
-                  <h3 className="font-bold">{level} applicants</h3>
-                  <ul className="mt-3 space-y-2.5">
-                    {ELIGIBILITY[level].map((item) => (
-                      <li key={item} className="flex gap-2 text-sm text-muted-foreground">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <div className="mt-5">
+              <div className="rounded-2xl border border-border p-6">
+                <h3 className="font-bold">Ordinary National Diploma (OND) applicants</h3>
+                <ul className="mt-3 space-y-2.5">
+                  {ELIGIBILITY.ND.map((item) => (
+                    <li key={item} className="flex gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             <h2 className="mt-12 text-2xl font-extrabold">Documents to prepare</h2>
@@ -97,10 +95,10 @@ function ScholarshipPage() {
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {[
-                "O'Level result (ND applicants)",
-                "ND certificate or statement of result (HND applicants)",
+                "O'Level result (WAEC, NECO, or NABTEB)",
                 "Passport photograph",
                 "A phone number you use regularly",
+                "Valid email address",
               ].map((d) => (
                 <div
                   key={d}
@@ -122,8 +120,8 @@ function ScholarshipPage() {
               <p className="text-sm text-muted-foreground">No tuition fees</p>
               <dl className="mt-6 space-y-3 text-sm">
                 <div>
-                  <dt className="text-muted-foreground">Levels</dt>
-                  <dd className="font-semibold">ND and HND</dd>
+                  <dt className="text-muted-foreground">Level</dt>
+                  <dd className="font-semibold">Ordinary National Diploma (OND)</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Programmes</dt>

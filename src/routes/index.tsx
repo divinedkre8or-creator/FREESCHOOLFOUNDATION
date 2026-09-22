@@ -26,9 +26,9 @@ import { seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/")({
   head: () =>
     seoHead({
-      title: "100% Free ND & HND Scholarship | The Free School Foundation",
+      title: "100% Free OND Scholarship | The Free School Foundation",
       description:
-        "Apply for a 100% funded ND or HND scholarship in Nigeria. Study through the Open Distance Learning (ODL) Programme with no tuition or application fee.",
+        "Apply for a 100% funded Ordinary National Diploma (OND) scholarship in Nigeria. Study through the Open Distance Learning (ODL) Programme with no tuition or application fee.",
       path: "/",
     }),
   component: Home,
@@ -45,7 +45,7 @@ function Home() {
               <BadgeCheck className="h-4 w-4" /> Applications open
             </span>
             <h1 className="mt-5 text-3xl leading-[1.05] font-extrabold min-[380px]:text-4xl md:text-6xl">
-              Get your ND or HND
+              Get your OND
               <span className="mt-1 block text-brand-orange">100% free</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
@@ -74,7 +74,7 @@ function Home() {
             <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-border bg-card/95 p-4 backdrop-blur">
               <p className="text-sm font-bold">No tuition fees</p>
               <p className="text-xs text-muted-foreground">
-                Full scholarship covering your ND or HND programme
+                Full scholarship covering your OND programme
               </p>
             </div>
           </div>
@@ -97,7 +97,7 @@ function Home() {
               {
                 icon: Wallet,
                 title: "100% full scholarship",
-                body: "Your tuition for the full ND or HND programme is covered by the Foundation.",
+                body: "Your tuition for the full OND programme is covered by the Foundation.",
               },
               {
                 icon: ClipboardList,
@@ -112,7 +112,7 @@ function Home() {
               {
                 icon: ShieldCheck,
                 title: "Recognised diploma",
-                body: "Accredited National Diploma & Higher National Diploma awards through approved programmes.",
+                body: "Accredited Ordinary National Diploma (OND) awards through approved programmes.",
               },
             ].map((item) => (
               <div key={item.title} className="rounded-2xl border border-border p-5 sm:p-6">
@@ -132,7 +132,7 @@ function Home() {
             <div>
               <h2 className="text-2xl font-extrabold md:text-4xl">Available programmes</h2>
               <p className="mt-3 max-w-xl text-muted-foreground">
-                Five programmes, available at both ND and HND level.
+                Five programmes, available at Ordinary National Diploma (OND) level.
               </p>
             </div>
             <Button asChild variant="outline">
@@ -151,7 +151,7 @@ function Home() {
                   {PROGRAMME_DETAILS[p].blurb}
                 </p>
                 <p className="mt-4 text-xs font-semibold text-brand-green-dark">
-                  ND &amp; HND available
+                  OND available
                 </p>
               </Link>
             ))}
@@ -175,35 +175,31 @@ function Home() {
         </div>
       </section>
 
-      {/* Eligibility + ND/HND */}
+      {/* Eligibility */}
       <section className="border-y border-border bg-brand-green-soft/40 section-y">
-        <div className="container-page grid gap-8 lg:grid-cols-2">
-          {(["ND", "HND"] as const).map((level) => (
-            <div key={level} className="rounded-2xl border border-border bg-card p-5 sm:p-7">
-              <h2 className="text-xl font-extrabold md:text-2xl">
-                {level === "ND" ? "National Diploma (ND)" : "Higher National Diploma (HND)"}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {level === "ND"
-                  ? "For applicants with O'Level results who are starting their polytechnic education."
-                  : "For applicants who already hold an ND and want to complete the higher diploma."}
-              </p>
-              <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-brand-orange">
-                Who can apply
-              </h3>
-              <ul className="mt-3 space-y-3">
-                {ELIGIBILITY[level].map((item) => (
-                  <li key={item} className="flex gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button asChild className="mt-7 w-full sm:w-auto">
-                <Link to="/apply">Apply for {level}</Link>
-              </Button>
-            </div>
-          ))}
+        <div className="container-page max-w-3xl">
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+            <h2 className="text-xl font-extrabold md:text-2xl">
+              Ordinary National Diploma (OND) Eligibility
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              For applicants with O'Level results who are starting their polytechnic education.
+            </p>
+            <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-brand-orange">
+              Who can apply
+            </h3>
+            <ul className="mt-3 space-y-3">
+              {ELIGIBILITY.ND.map((item) => (
+                <li key={item} className="flex gap-3 text-sm text-muted-foreground">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <Button asChild className="mt-7 w-full sm:w-auto">
+              <Link to="/apply">Apply for scholarship</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -223,7 +219,7 @@ function Home() {
             <p className="mt-4 leading-relaxed text-muted-foreground">
               We work directly with recognised institutions so that every place we fund leads to a
               real, accredited qualification. Our Open Distance Learning (ODL) scholarship covers
-              100% of tuition for eligible ND and HND candidates.
+              100% of tuition for eligible OND candidates.
             </p>
             <Button asChild variant="outline" className="mt-6">
               <Link to="/about">Read more about us</Link>

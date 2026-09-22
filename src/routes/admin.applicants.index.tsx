@@ -413,7 +413,7 @@ function ApplicantsPage() {
             <FilterSelect
               value={level}
               onChange={setLevel}
-              options={["All", "ND", "HND"]}
+              options={["All", "ND"]}
               label="level"
             />
             <FilterSelect

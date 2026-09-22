@@ -423,9 +423,7 @@ function ApplicantProfile() {
                 ["Programme Applied", application.programme],
                 [
                   "Target Award Level",
-                  application.level === "ND"
-                    ? "National Diploma (ND)"
-                    : "Higher National Diploma (HND)",
+                  "Ordinary National Diploma (OND)",
                 ],
                 ["Partner Institution", "Citi Polytechnic ODL Partnership"],
                 ["Scholarship Campaign", application.campaign],

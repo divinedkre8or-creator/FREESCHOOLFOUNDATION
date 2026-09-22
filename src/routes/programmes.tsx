@@ -8,9 +8,9 @@ import { absoluteUrl, breadcrumbSchema, seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/programmes")({
   head: () =>
     seoHead({
-      title: "Fully Funded ND & HND Programmes | The Free School Foundation",
+      title: "Fully Funded OND Programmes | The Free School Foundation",
       description:
-        "Explore fully funded ND and HND options in Computer Science, Computer Engineering, Electrical Engineering, Mass Communication and Business Administration.",
+        "Explore fully funded Ordinary National Diploma (OND) options in Computer Science, Computer Engineering, Electrical Engineering, Mass Communication and Business Administration.",
       path: "/programmes",
       scripts: [
         {
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/programmes")({
             {
               "@context": "https://schema.org",
               "@type": "ItemList",
-              name: "Fully funded ND and HND programmes",
+              name: "Fully funded OND programmes",
               url: absoluteUrl("/programmes"),
               numberOfItems: PROGRAMMES.length,
               itemListElement: PROGRAMMES.map((name, index) => ({
@@ -45,8 +45,8 @@ function ProgrammesPage() {
     <SiteLayout>
       <PageHero
         eyebrow="Programmes"
-        title="Five programmes, two levels, fully funded"
-        description="Every programme below is available at both National Diploma (ND) and Higher National Diploma (HND) level under the current scholarship."
+        title="Five programmes, fully funded"
+        description="Every programme below is available at Ordinary National Diploma (OND) level under the current scholarship."
       />
 
       <section className="section-y">
@@ -55,10 +55,7 @@ function ProgrammesPage() {
             <article key={p} className="rounded-2xl border border-border p-7">
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-brand-green-soft px-2.5 py-1 text-xs font-bold text-brand-green-dark">
-                  ND
-                </span>
-                <span className="rounded-full bg-brand-orange-soft px-2.5 py-1 text-xs font-bold text-brand-orange">
-                  HND
+                  OND
                 </span>
               </div>
               <h2 className="mt-4 text-xl font-bold">{p}</h2>

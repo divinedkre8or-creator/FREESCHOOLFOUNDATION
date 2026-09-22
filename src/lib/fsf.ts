@@ -2,7 +2,7 @@
 // scholarship portal. This layer is intentionally UI-only (in-memory +
 // localStorage) so a real database and auth can replace it later.
 
-export type Level = "ND" | "HND";
+export type Level = "ND";
 
 export const PROGRAMMES = [
   "Mass Communication",
@@ -211,13 +211,13 @@ export type Application = {
     photo?: string;
   };
   education: {
-    // ND path
+    // Secondary education
     secondarySchool?: string;
     examType?: string;
     examYear?: string;
     examNumber?: string;
     subjects?: string;
-    // HND path
+    // Optional legacy fields for backward compatibility
     ndInstitution?: string;
     ndProgramme?: string;
     ndGraduationYear?: string;
@@ -409,7 +409,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         id: "1285",
         first: "Amina",
         last: "Bello",
-        level: "HND",
+        level: "ND",
         programme: "Mass Communication",
         status: "Shortlisted",
         days: 9,
@@ -429,7 +429,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         id: "1287",
         first: "Blessing",
         last: "Adeyemi",
-        level: "HND",
+        level: "ND",
         programme: "Business Administration and Management",
         status: "Approved",
         days: 14,
@@ -459,7 +459,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         id: "1290",
         first: "Peter",
         last: "Etim",
-        level: "HND",
+        level: "ND",
         programme: "Computer Science",
         status: "Not Successful",
         days: 18,
@@ -489,7 +489,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         id: "1293",
         first: "Rita",
         last: "Obi",
-        level: "HND",
+        level: "ND",
         programme: "Electrical Engineering",
         status: "Submitted",
         days: 3,
@@ -555,7 +555,7 @@ export const DEMO_CAMPAIGNS: Campaign[] = INCLUDE_DEMO_DATA
         name: "Citi Polytechnic ODL Scholarship 2026",
         partner: "Citi Polytechnic Abuja",
         description:
-          "100% funded ND and HND places through the Open Distance Learning (ODL) Programme, studied from Aba.",
+          "100% funded OND places through the Open Distance Learning (ODL) Programme, studied from Aba.",
         programmes: [...PROGRAMMES],
         opensOn: "2026-08-01",
         deadline: "2026-11-30",

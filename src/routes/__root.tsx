@@ -86,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "100% funded ND and HND scholarships from The Free School Foundation through accredited Open Distance Learning (ODL) programmes.",
+          "100% funded Ordinary National Diploma (OND) scholarships from The Free School Foundation through accredited Open Distance Learning (ODL) programmes.",
       },
       { name: "author", content: "The Free School Foundation" },
       { name: "theme-color", content: "#167a42" },

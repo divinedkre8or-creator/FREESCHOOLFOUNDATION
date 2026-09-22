@@ -1,7 +1,7 @@
 export const FAQS = [
   {
     q: "Is the scholarship really 100% free?",
-    a: "Yes. The Free School Foundation covers your tuition for the full ND or HND programme. You will never be asked to pay a fee to apply.",
+    a: "Yes. The Free School Foundation covers your tuition for the full OND programme. You will never be asked to pay a fee to apply.",
   },
   {
     q: "Do I have to travel to Abuja to study?",
@@ -9,11 +9,11 @@ export const FAQS = [
   },
   {
     q: "Who can apply?",
-    a: "Anyone with the required O'Level results can apply for ND. For HND you need a completed ND in a related programme from a recognised institution.",
+    a: "Anyone with the required O'Level results can apply for the Ordinary National Diploma (OND) scholarship.",
   },
   {
     q: "What documents do I need to start?",
-    a: "Just your O'Level result (or ND certificate/statement of result for HND applicants) and a passport photograph. Extra documents are only requested if you are shortlisted.",
+    a: "Just your O'Level result and a passport photograph. Extra documents are only requested if you are shortlisted.",
   },
   {
     q: "Can I apply while working?",
@@ -63,10 +63,5 @@ export const ELIGIBILITY = {
     "Valid means of contact — a phone number you use regularly",
     "Willingness to study through the Open Distance Learning (ODL) format",
   ],
-  HND: [
-    "Completed National Diploma (ND) in a related programme",
-    "Statement of result or certificate from a recognised institution",
-    "ND grade of Pass and above",
-    "Evidence of IT/industrial training where applicable",
-  ],
 };
+

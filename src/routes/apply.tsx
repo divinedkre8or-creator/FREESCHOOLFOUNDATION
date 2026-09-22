@@ -229,14 +229,8 @@ function ApplyPage() {
         !form.address)
     )
       nextErrors.push("Complete all required personal information.");
-    if (step === 2 && form.level === "ND" && (!form.secondarySchool || !form.examYear))
+    if (step === 2 && (!form.secondarySchool || !form.examYear))
       nextErrors.push("Add your secondary school and examination year.");
-    if (
-      step === 2 &&
-      form.level === "HND" &&
-      (!form.ndInstitution || !form.ndProgramme || !form.ndGraduationYear)
-    )
-      nextErrors.push("Complete your ND qualification details.");
     if (step === 3 && (!form.reason || !form.goals))
       nextErrors.push("Answer both scholarship questions.");
     if (step === 5 && (!declaration || !consent))
@@ -714,27 +708,22 @@ function Programme({
 }) {
   return (
     <>
-      <h1 className="text-2xl font-extrabold md:text-3xl">Choose your study path</h1>
+      <h1 className="text-2xl font-extrabold md:text-3xl">Choose your programme</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        We will only show education questions relevant to your level.
+        Select the Ordinary National Diploma (OND) programme you wish to apply for.
       </p>
-      <div className="mt-7 grid gap-3 min-[380px]:grid-cols-2">
-        {(["ND", "HND"] as Level[]).map((level) => (
-          <button
-            type="button"
-            key={level}
-            onClick={() => update("level", level)}
-            className={`rounded-xl border p-5 text-left ${form.level === level ? "border-brand-green bg-brand-green-soft ring-1 ring-brand-green" : "border-border"}`}
-          >
-            <strong className="text-lg">{level}</strong>
-            <span className="mt-1 block text-xs text-muted-foreground">
-              {level === "ND" ? "Start a National Diploma" : "Continue after your ND"}
-            </span>
-          </button>
-        ))}
+      <div className="mt-7">
+        <Field label="Award / Level">
+          <Input
+            className={fieldClass}
+            value="Ordinary National Diploma (OND)"
+            disabled
+            readOnly
+          />
+        </Field>
       </div>
       <div className="mt-6">
-        <Field label="Target programme">
+        <Field label="Target programme" required>
           <select
             className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
             value={form.programme}
@@ -760,88 +749,44 @@ function Education({
     <>
       <h1 className="text-2xl font-extrabold md:text-3xl">Academic qualification</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        {form.level === "ND"
-          ? "Tell us about your secondary school background and examination results."
-          : "Provide your National Diploma details and graduation record."}
+        Tell us about your secondary school background and examination results.
       </p>
       <div className="mt-7 grid gap-5 md:grid-cols-2">
-        {form.level === "ND" ? (
-          <>
-            <div className="md:col-span-2">
-              <Field label="Secondary school attended" required>
-                <Input
-                  className={fieldClass}
-                  autoCapitalize="words"
-                  value={form.secondarySchool}
-                  onChange={(e) => update("secondarySchool", e.target.value)}
-                />
-              </Field>
-            </div>
-            <Field label="Examination type">
-              <Input
-                className={fieldClass}
-                value={form.examType}
-                onChange={(e) => update("examType", e.target.value)}
-              />
-            </Field>
-            <Field label="Examination year" required>
-              <Input
-                className={fieldClass}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={4}
-                value={form.examYear}
-                onChange={(e) => update("examYear", e.target.value)}
-              />
-            </Field>
-            <Field label="Examination number">
-              <Input
-                className={fieldClass}
-                autoCapitalize="characters"
-                value={form.examNumber}
-                onChange={(e) => update("examNumber", e.target.value)}
-              />
-            </Field>
-          </>
-        ) : (
-          <>
-            <div className="md:col-span-2">
-              <Field label="ND institution" required>
-                <Input
-                  className={fieldClass}
-                  autoCapitalize="words"
-                  value={form.ndInstitution}
-                  onChange={(e) => update("ndInstitution", e.target.value)}
-                />
-              </Field>
-            </div>
-            <Field label="ND programme" required>
-              <Input
-                className={fieldClass}
-                autoCapitalize="words"
-                value={form.ndProgramme}
-                onChange={(e) => update("ndProgramme", e.target.value)}
-              />
-            </Field>
-            <Field label="Graduation year" required>
-              <Input
-                className={fieldClass}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={4}
-                value={form.ndGraduationYear}
-                onChange={(e) => update("ndGraduationYear", e.target.value)}
-              />
-            </Field>
-            <Field label="Grade">
-              <Input
-                className={fieldClass}
-                value={form.ndGrade}
-                onChange={(e) => update("ndGrade", e.target.value)}
-              />
-            </Field>
-          </>
-        )}
+        <div className="md:col-span-2">
+          <Field label="Secondary school attended" required>
+            <Input
+              className={fieldClass}
+              autoCapitalize="words"
+              value={form.secondarySchool}
+              onChange={(e) => update("secondarySchool", e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Examination type">
+          <Input
+            className={fieldClass}
+            value={form.examType}
+            onChange={(e) => update("examType", e.target.value)}
+          />
+        </Field>
+        <Field label="Examination year" required>
+          <Input
+            className={fieldClass}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={4}
+            value={form.examYear}
+            onChange={(e) => update("examYear", e.target.value)}
+          />
+        </Field>
+        <Field label="Examination number">
+          <Input
+            className={fieldClass}
+            autoCapitalize="characters"
+            value={form.examNumber}
+            onChange={(e) => update("examNumber", e.target.value)}
+          />
+        </Field>
       </div>
     </>
   );
@@ -955,7 +900,7 @@ function Documents({
       </p>
       <div className="mt-7 rounded-xl border-2 border-dashed border-border bg-secondary/30 p-5 text-center sm:p-7">
         <FileCheck2 className="mx-auto h-8 w-8 text-brand-green" />
-        <p className="mt-3 font-bold">O’Level or ND result</p>
+        <p className="mt-3 font-bold">O’Level result (WAEC, NECO, or NABTEB)</p>
         <p className="mt-1 text-xs text-muted-foreground">PDF, JPG, PNG or WebP, up to 10 MB</p>
         <Label className="mt-5 inline-flex cursor-pointer rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold transition-colors hover:bg-secondary">
           <input
@@ -1012,11 +957,11 @@ function Review({
         step: 0,
         lines: [`${form.firstName} ${form.lastName}`, form.phone, form.email],
       },
-      { title: "Programme", step: 1, lines: [`${form.level} · ${form.programme}`] },
+      { title: "Programme", step: 1, lines: [`Ordinary National Diploma (OND) · ${form.programme}`] },
       {
         title: "Education",
         step: 2,
-        lines: [form.level === "ND" ? form.secondarySchool : form.ndInstitution],
+        lines: [form.secondarySchool],
       },
       { title: "Documents", step: 4, lines: [fileName || "No initial document added"] },
     ],
@@ -1532,9 +1477,7 @@ function SubmissionSuccessView({
               <div className="flex items-center justify-between p-3.5 sm:px-4">
                 <span className="font-medium text-muted-foreground">Award / Level</span>
                 <span className="font-bold text-foreground">
-                  {application.level === "ND"
-                    ? "National Diploma (ND)"
-                    : "Higher National Diploma (HND)"}
+                  Ordinary National Diploma (OND)
                 </span>
               </div>
               <div className="flex items-center justify-between p-3.5 sm:px-4">

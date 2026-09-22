@@ -6,6 +6,26 @@ import { getServerSupabaseConfig } from "@/lib/supabase/config";
 import { buildPlatformEmail } from "./templates";
 import type { PlatformEmailEvent } from "./templates";
 
+function getResendConfig() {
+  const resendKey = process.env["RESEND_API_KEY"];
+  const from =
+    process.env["RESEND_FROM_EMAIL"] ||
+    "The Free School Foundation <notifications@updates.thefreeschoolfoundation.com.ng>";
+  const replyTo =
+    process.env["RESEND_REPLY_TO"] || "info@thefreeschoolfoundation.com.ng";
+  const appBaseUrl =
+    process.env["APP_BASE_URL"] || "https://thefreeschoolfoundation.com.ng";
+
+  if (!resendKey) {
+    console.warn(
+      "[platform-email] RESEND_API_KEY is not set in process.env. " +
+        "Email delivery will fail. Set it in .env.local (dev) or Vercel Environment Variables (prod).",
+    );
+  }
+
+  return { resendKey, from, replyTo, appBaseUrl };
+}
+
 const inputSchema = z.object({
   accessToken: z.string().min(20),
   applicationIds: z.array(z.string().uuid()).min(1).max(100),
@@ -18,12 +38,7 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
   .validator(inputSchema)
   .handler(async ({ data }) => {
     const { url: supabaseUrl, publishableKey } = getServerSupabaseConfig();
-    const resendKey = process.env["RESEND_API_KEY"];
-    const from =
-      process.env["RESEND_FROM_EMAIL"] ||
-      "The Free School Foundation <notifications@updates.thefreeschoolfoundation.com.ng>";
-    const replyTo = process.env["RESEND_REPLY_TO"] || "info@thefreeschoolfoundation.com.ng";
-    const appBaseUrl = process.env["APP_BASE_URL"] || "https://thefreeschoolfoundation.com.ng";
+    const { resendKey, from, replyTo, appBaseUrl } = getResendConfig();
     if (!resendKey) throw new Error("Platform email is not configured.");
 
     const supabase = createClient(supabaseUrl, publishableKey, {
@@ -167,13 +182,8 @@ const sendRegisteredUsersEmailBatch = createServerFn({ method: "POST" })
   .validator(registeredUsersEmailSchema)
   .handler(async ({ data }) => {
     const { url: supabaseUrl, publishableKey } = getServerSupabaseConfig();
-    const resendKey = process.env["RESEND_API_KEY"];
+    const { resendKey, from, replyTo, appBaseUrl } = getResendConfig();
     const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-    const from =
-      process.env["RESEND_FROM_EMAIL"] ||
-      "The Free School Foundation <notifications@updates.thefreeschoolfoundation.com.ng>";
-    const replyTo = process.env["RESEND_REPLY_TO"] || "info@thefreeschoolfoundation.com.ng";
-    const appBaseUrl = process.env["APP_BASE_URL"] || "https://thefreeschoolfoundation.com.ng";
     if (!resendKey) throw new Error("Platform email is not configured.");
 
     const supabase = createClient(supabaseUrl, publishableKey, {
