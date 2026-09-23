@@ -7,14 +7,43 @@ import { buildPlatformEmail } from "./templates";
 import type { PlatformEmailEvent } from "./templates";
 
 function getResendConfig() {
-  const resendKey = process.env["RESEND_API_KEY"];
-  const from =
+  const rawKey =
+    process.env["RESEND_API_KEY"] ||
+    process.env["VITE_RESEND_API_KEY"] ||
+    // @ts-ignore
+    (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.RESEND_API_KEY || import.meta.env.VITE_RESEND_API_KEY) : undefined) ||
+    "";
+  const resendKey = String(rawKey).replace(/^["']|["']$/g, "").trim();
+
+  const rawFrom =
     process.env["RESEND_FROM_EMAIL"] ||
+    process.env["VITE_RESEND_FROM_EMAIL"] ||
+    // @ts-ignore
+    (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.RESEND_FROM_EMAIL || import.meta.env.VITE_RESEND_FROM_EMAIL) : undefined) ||
+    "";
+  const from =
+    String(rawFrom).replace(/^["']|["']$/g, "").trim() ||
     "The Free School Foundation <notifications@updates.thefreeschoolfoundation.com.ng>";
+
+  const rawReplyTo =
+    process.env["RESEND_REPLY_TO"] ||
+    process.env["VITE_RESEND_REPLY_TO"] ||
+    // @ts-ignore
+    (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.RESEND_REPLY_TO || import.meta.env.VITE_RESEND_REPLY_TO) : undefined) ||
+    "";
   const replyTo =
-    process.env["RESEND_REPLY_TO"] || "info@thefreeschoolfoundation.com.ng";
+    String(rawReplyTo).replace(/^["']|["']$/g, "").trim() ||
+    "info@thefreeschoolfoundation.com.ng";
+
+  const rawBaseUrl =
+    process.env["APP_BASE_URL"] ||
+    process.env["VITE_APP_BASE_URL"] ||
+    // @ts-ignore
+    (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.APP_BASE_URL || import.meta.env.VITE_APP_BASE_URL) : undefined) ||
+    "";
   const appBaseUrl =
-    process.env["APP_BASE_URL"] || "https://thefreeschoolfoundation.com.ng";
+    String(rawBaseUrl).replace(/^["']|["']$/g, "").trim() ||
+    "https://thefreeschoolfoundation.com.ng";
 
   if (!resendKey) {
     console.warn(
@@ -138,7 +167,11 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
       },
       body: JSON.stringify(emails),
     });
-    if (!response.ok) throw new Error("Resend could not deliver the platform email.");
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      console.error("[platform-email] Resend batch delivery error:", response.status, errText);
+      throw new Error(`Resend delivery failed (${response.status}): ${errText || response.statusText}`);
+    }
     return { sent: emails.length };
   });
 
@@ -309,7 +342,11 @@ const sendRegisteredUsersEmailBatch = createServerFn({ method: "POST" })
       body: JSON.stringify(emails),
     });
 
-    if (!response.ok) throw new Error("Resend could not deliver the reminder emails.");
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      console.error("[platform-email] Resend reminder delivery error:", response.status, errText);
+      throw new Error(`Resend delivery failed (${response.status}): ${errText || response.statusText}`);
+    }
     return { sent: emails.length };
   });
 
