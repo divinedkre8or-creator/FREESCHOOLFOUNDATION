@@ -414,18 +414,23 @@ export async function changeApplicationStatus(
   status: ApplicationStatus,
   applicantMessage?: string,
 ): Promise<void> {
+  const dbStatus = STATUS_TO_DB[status] || status.toLowerCase().replace(/\s+/g, "_");
   try {
     const { adminUpdateApplicationStatus } = await import("@/lib/admin/admin-actions");
-    await adminUpdateApplicationStatus(applicationId, STATUS_TO_DB[status], applicantMessage);
+    await adminUpdateApplicationStatus(applicationId, dbStatus, applicantMessage);
+    return;
   } catch (serverErr) {
     console.warn("Server status update failed, attempting RPC fallback:", serverErr);
     const { error } = await getSupabaseBrowserClient().rpc("change_application_status", {
       target_application_id: applicationId,
-      target_status: STATUS_TO_DB[status],
+      target_status: dbStatus as any,
       applicant_message: applicantMessage ?? null,
       internal_reason: null,
     });
-    if (error) throw new Error("The status change was not allowed or could not be saved: " + error.message);
+    if (error) {
+      const msg = serverErr instanceof Error ? serverErr.message : error.message;
+      throw new Error("The status change was not allowed or could not be saved: " + msg);
+    }
   }
 }
 
@@ -433,13 +438,17 @@ export async function addApplicationNote(applicationId: string, body: string): P
   try {
     const { adminAddApplicationNote } = await import("@/lib/admin/admin-actions");
     await adminAddApplicationNote(applicationId, body);
+    return;
   } catch (serverErr) {
     console.warn("Server add note failed, attempting RPC fallback:", serverErr);
     const { error } = await getSupabaseBrowserClient().rpc("add_application_note", {
       target_application_id: applicationId,
       note_body: body,
     });
-    if (error) throw new Error("The private note could not be saved: " + error.message);
+    if (error) {
+      const msg = serverErr instanceof Error ? serverErr.message : error.message;
+      throw new Error("The private note could not be saved: " + msg);
+    }
   }
 }
 
@@ -450,13 +459,17 @@ export async function requestApplicationDocument(
   try {
     const { adminRequestApplicationDocument } = await import("@/lib/admin/admin-actions");
     await adminRequestApplicationDocument(applicationId, documentType);
+    return;
   } catch (serverErr) {
     console.warn("Server request doc failed, attempting RPC fallback:", serverErr);
     const { error } = await getSupabaseBrowserClient().rpc("request_application_document", {
       target_application_id: applicationId,
       requested_document_type: documentType,
     });
-    if (error) throw new Error("The document request could not be saved: " + error.message);
+    if (error) {
+      const msg = serverErr instanceof Error ? serverErr.message : error.message;
+      throw new Error("The document request could not be saved: " + msg);
+    }
   }
 }
 
