@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Award,
+  BookOpen,
   Check,
   CheckCircle2,
   Clock,
@@ -13,6 +14,8 @@ import {
   FileSpreadsheet,
   FileText,
   Filter,
+  HelpCircle,
+  Info,
   Mail,
   Phone,
   PhoneCall,
@@ -99,6 +102,7 @@ function ApplicantsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [showAdminGuide, setShowAdminGuide] = useState(false);
 
   const fetchUsersAndApps = async () => {
     try {
@@ -681,27 +685,32 @@ function ApplicantsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
-          Scholarship Administration
-        </p>
-        <div className="mt-1 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
+            Scholarship Administration
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowAdminGuide(!showAdminGuide)}
+            className="flex items-center gap-1 text-xs font-semibold text-brand-green-dark hover:underline"
+          >
+            <HelpCircle className="h-3.5 w-3.5 text-brand-green" />
+            {showAdminGuide ? "Hide Admin Guide" : "How to use these tools"}
+          </button>
+        </div>
+
+        <div className="mt-1 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">Applicant Directory & Accounts</h1>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Inspect candidate biodata, verify documents, view all registered accounts, and export candidate contacts.
+              Inspect candidate biodata, verify documents, view accounts, and manage bulk decisions.
             </p>
           </div>
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+
+          {/* Mobile & Desktop Responsive Action Buttons */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <Button
-              variant="outline"
-              disabled={refreshing}
-              onClick={() => void handleRefresh()}
-            >
-              <RotateCcw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </Button>
-            <Button
-              className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold shadow-xs"
+              className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold shadow-xs h-10 col-span-2 sm:col-span-1"
               onClick={() => {
                 if (selectedIds.length > 0) {
                   setBulkApproveTargetCategory("selected_only");
@@ -715,12 +724,13 @@ function ApplicantsPage() {
                 setBulkApproveModalOpen(true);
               }}
             >
-              <Award className="mr-2 h-4 w-4 text-brand-orange" />
+              <Award className="mr-1.5 h-4 w-4 text-brand-orange" />
               Bulk Approve
             </Button>
+
             <Button
               variant="outline"
-              className="border-brand-green/40 hover:bg-brand-green-soft text-brand-green-dark font-bold shadow-xs"
+              className="border-brand-green/40 hover:bg-brand-green-soft text-brand-green-dark font-bold shadow-xs h-10"
               onClick={() => {
                 if (selectedIds.length > 0 || selectedRegUserIds.length > 0) {
                   setPhoneTargetCategory("selected_only");
@@ -730,37 +740,96 @@ function ApplicantsPage() {
                 setPhoneModalOpen(true);
               }}
             >
-              <Phone className="mr-2 h-4 w-4 text-brand-green" />
-              Target & Copy Phone Numbers
+              <Phone className="mr-1.5 h-4 w-4 text-brand-green" />
+              Copy Phones
             </Button>
+
             <Button
               variant="outline"
+              className="h-10"
               onClick={() => void copyAllEmails()}
             >
               {copiedEmails ? (
                 <>
-                  <Check className="mr-2 h-4 w-4 text-brand-green" />
-                  Copied Emails!
+                  <Check className="mr-1.5 h-4 w-4 text-brand-green" />
+                  Copied!
                 </>
               ) : (
                 <>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy All Emails
+                  <Copy className="mr-1.5 h-4 w-4" />
+                  Copy Emails
                 </>
               )}
             </Button>
+
             <Button
-              className="w-full gap-2 sm:w-auto"
               variant="outline"
+              className="h-10"
               onClick={activeTab === "registered" ? exportAllRegistered : exportPhones}
             >
-              <Download className="h-4 w-4" />
-              {activeTab === "registered"
-                ? `Export Accounts (${registeredUsers.length})`
-                : `Export CSV (${selected.length > 0 ? selected.length : filtered.length})`}
+              <Download className="mr-1.5 h-4 w-4" />
+              Export CSV
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0 hidden sm:inline-flex"
+              disabled={refreshing}
+              onClick={() => void handleRefresh()}
+              title="Refresh directory data"
+            >
+              <RotateCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
+
+        {/* Non-Technical Admin Help Card */}
+        {showAdminGuide && (
+          <div className="mt-4 rounded-2xl border border-brand-green/30 bg-brand-green-soft/30 p-4 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center justify-between pb-2 border-b border-brand-green/20">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-brand-green-dark" />
+                <h2 className="text-sm font-bold text-brand-green-dark">Admin Operations & Quick Guide</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdminGuide(false)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-xs">
+              <div className="rounded-xl border border-border/60 bg-card p-3 shadow-xs">
+                <div className="flex items-center gap-2 font-bold text-foreground mb-1">
+                  <Award className="h-4 w-4 text-brand-orange" /> 1. Bulk Approvals
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  Select shortlisted candidates with checkboxes, or choose an entire stage. Approving moves them to 100% admission and sends a banner notification to their portal.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-card p-3 shadow-xs">
+                <div className="flex items-center gap-2 font-bold text-foreground mb-1">
+                  <Phone className="h-4 w-4 text-brand-green" /> 2. Target & Copy Phones
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  Extract cleaned phone numbers for any category (e.g. Unapplied, Shortlisted, Approved). Ready to paste directly into Bulk SMS or WhatsApp broadcast tools.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-card p-3 shadow-xs">
+                <div className="flex items-center gap-2 font-bold text-foreground mb-1">
+                  <Mail className="h-4 w-4 text-brand-orange" /> 3. Candidate Follow-ups
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  Use the <strong>Registered User Accounts</strong> tab to see people who registered but haven't submitted their form, and send 1-click reminders to finish.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
