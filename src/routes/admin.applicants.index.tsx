@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  Award,
   Check,
   CheckCircle2,
   Clock,
@@ -79,6 +80,25 @@ function ApplicantsPage() {
   const [phoneFormat, setPhoneFormat] = useState<"local" | "international">("local");
   const [phoneDelimiter, setPhoneDelimiter] = useState<", " | "\n" | "; ">(", ");
   const [copiedPhoneText, setCopiedPhoneText] = useState(false);
+  const [bulkApproveModalOpen, setBulkApproveModalOpen] = useState(false);
+  const [bulkApproveTargetCategory, setBulkApproveTargetCategory] = useState<
+    "selected_only" | "shortlisted" | "under_review" | "current_filter"
+  >("selected_only");
+  const [bulkApproveTimelineMessage, setBulkApproveTimelineMessage] = useState(
+    "Congratulations! Your scholarship application has been approved."
+  );
+  const [bulkApprovePortalSubject, setBulkApprovePortalSubject] = useState(
+    "Congratulations! Scholarship Application Approved"
+  );
+  const [bulkApprovePortalBody, setBulkApprovePortalBody] = useState(
+    "Dear Candidate,\n\nWe are pleased to inform you that your application for The Free School Foundation Scholarship has been officially APPROVED.\n\nPlease log in to your portal to review your admission details, official records, and upcoming onboarding schedule."
+  );
+  const [bulkApproveSendEmail, setBulkApproveSendEmail] = useState(false);
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkApproveFeedback, setBulkApproveFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const fetchUsersAndApps = async () => {
     try {
@@ -579,6 +599,84 @@ function ApplicantsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const bulkApproveTargetApps = useMemo(() => {
+    let targets: typeof applications = [];
+    if (bulkApproveTargetCategory === "selected_only") {
+      targets = applications.filter((a) => selectedIds.includes(a.id));
+    } else if (bulkApproveTargetCategory === "shortlisted") {
+      targets = applications.filter((a) => a.status === "Shortlisted");
+    } else if (bulkApproveTargetCategory === "under_review") {
+      targets = applications.filter(
+        (a) => a.status === "Under Review" || a.status === "Submitted"
+      );
+    } else if (bulkApproveTargetCategory === "current_filter") {
+      targets = filtered;
+    }
+
+    const eligible = targets.filter(
+      (a) => a.status !== "Approved" && a.status !== "Enrolled"
+    );
+    const alreadyApproved = targets.filter(
+      (a) => a.status === "Approved" || a.status === "Enrolled"
+    );
+
+    return {
+      all: targets,
+      eligible,
+      alreadyApproved,
+    };
+  }, [applications, selectedIds, filtered, bulkApproveTargetCategory]);
+
+  const handleBulkApprove = async () => {
+    if (bulkApproveTargetApps.eligible.length === 0) return;
+    setBulkApproving(true);
+    setBulkApproveFeedback(null);
+
+    try {
+      const { adminBulkApproveApplications } = await import("@/lib/admin/admin-actions");
+      const appIds = bulkApproveTargetApps.eligible.map((a) => a.id);
+
+      const res = await adminBulkApproveApplications({
+        applicationIds: appIds,
+        applicantMessage: bulkApproveTimelineMessage.trim() || undefined,
+        portalMessageSubject: bulkApprovePortalSubject.trim() || undefined,
+        portalMessageBody: bulkApprovePortalBody.trim() || undefined,
+      });
+
+      if (bulkApproveSendEmail) {
+        try {
+          const { sendPlatformEmail } = await import("@/lib/email/platform-email");
+          await sendPlatformEmail({
+            applicationIds: appIds,
+            event: "status",
+          });
+        } catch (emailErr) {
+          console.warn("Email dispatch error during bulk approve:", emailErr);
+        }
+      }
+
+      setBulkApproveFeedback({
+        type: "success",
+        text: `Successfully approved ${res.approvedCount} candidate${res.approvedCount === 1 ? "" : "s"} and dispatched high-priority portal notifications!`,
+      });
+
+      setSelectedIds([]);
+      await fetchUsersAndApps();
+
+      setTimeout(() => {
+        setBulkApproveModalOpen(false);
+        setBulkApproveFeedback(null);
+      }, 2500);
+    } catch (err) {
+      setBulkApproveFeedback({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to bulk approve applications.",
+      });
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -601,6 +699,24 @@ function ApplicantsPage() {
             >
               <RotateCcw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+            <Button
+              className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold shadow-xs"
+              onClick={() => {
+                if (selectedIds.length > 0) {
+                  setBulkApproveTargetCategory("selected_only");
+                } else if (status === "Shortlisted") {
+                  setBulkApproveTargetCategory("shortlisted");
+                } else if (status === "Under Review" || status === "Submitted") {
+                  setBulkApproveTargetCategory("under_review");
+                } else {
+                  setBulkApproveTargetCategory("current_filter");
+                }
+                setBulkApproveModalOpen(true);
+              }}
+            >
+              <Award className="mr-2 h-4 w-4 text-brand-orange" />
+              Bulk Approve
             </Button>
             <Button
               variant="outline"
@@ -717,21 +833,56 @@ function ApplicantsPage() {
           </div>
 
           {/* Filter Summary & Selection Bar */}
-          <div className="flex items-center justify-between gap-3 border-b border-border bg-secondary/20 px-5 py-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-2 font-medium">
-              <Filter className="h-3.5 w-3.5" /> Found {filtered.length} applicant{filtered.length === 1 ? "" : "s"}
-            </span>
-            {filtered.length > 0 && (
-              <button
-                type="button"
-                className="font-bold text-brand-green-dark hover:underline"
-                onClick={toggleFiltered}
-              >
-                {filtered.every((app) => selectedIds.includes(app.id))
-                  ? "Deselect all"
-                  : "Select all filtered"}
-              </button>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/20 px-5 py-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-2 font-medium">
+                <Filter className="h-3.5 w-3.5" /> Found {filtered.length} applicant{filtered.length === 1 ? "" : "s"}
+              </span>
+              {selectedIds.length > 0 && (
+                <span className="rounded-full bg-brand-green/15 px-2.5 py-0.5 font-bold text-brand-green-dark">
+                  {selectedIds.length} selected
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {selectedIds.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 font-bold text-brand-green-dark hover:underline"
+                    onClick={() => {
+                      setBulkApproveTargetCategory("selected_only");
+                      setBulkApproveModalOpen(true);
+                    }}
+                  >
+                    <Award className="h-3.5 w-3.5 text-brand-orange" />
+                    Approve Selected ({selectedIds.length})
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 font-bold text-muted-foreground hover:text-foreground hover:underline"
+                    onClick={() => {
+                      setPhoneTargetCategory("selected_only");
+                      setPhoneModalOpen(true);
+                    }}
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    Copy Phones
+                  </button>
+                </>
+              )}
+              {filtered.length > 0 && (
+                <button
+                  type="button"
+                  className="font-bold text-brand-green-dark hover:underline"
+                  onClick={toggleFiltered}
+                >
+                  {filtered.every((app) => selectedIds.includes(app.id))
+                    ? "Deselect all"
+                    : "Select all filtered"}
+                </button>
+              )}
+            </div>
           </div>
 
           {filtered.length === 0 ? (
@@ -1578,6 +1729,195 @@ function ApplicantsPage() {
                   )}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Approve Applications Modal */}
+      {bulkApproveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-brand-green-soft p-2.5 text-brand-green-dark">
+                  <Award className="h-6 w-6 text-brand-orange" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-foreground">
+                    Bulk Approve Scholarship Applications
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Batch approve candidate dossiers and automatically dispatch high-priority in-platform notifications.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={bulkApproving}
+                onClick={() => setBulkApproveModalOpen(false)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mt-4 space-y-4 overflow-y-auto pr-1">
+              {/* Category Selector */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  1. Target Batch Selection
+                </label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { id: "selected_only", label: "Selected Checkboxes", count: selectedIds.length },
+                    { id: "shortlisted", label: "All Shortlisted", count: stats.shortlisted },
+                    { id: "under_review", label: "Under Review / Screening", count: stats.underReview },
+                    { id: "current_filter", label: "Current Table View", count: filtered.length },
+                  ].map((cat) => {
+                    const isSelected = bulkApproveTargetCategory === cat.id;
+                    const isDisabled = cat.id === "selected_only" && selectedIds.length === 0;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => setBulkApproveTargetCategory(cat.id as any)}
+                        className={`flex flex-col items-start justify-between rounded-xl border p-2.5 text-left transition-all ${
+                          isDisabled
+                            ? "opacity-40 cursor-not-allowed border-border bg-secondary/10"
+                            : isSelected
+                              ? "border-brand-green bg-brand-green-soft text-brand-green-dark shadow-xs font-bold ring-2 ring-brand-green/30"
+                              : "border-border bg-card hover:bg-secondary/40 text-foreground"
+                        }`}
+                      >
+                        <span className="text-xs">{cat.label}</span>
+                        <span className={`mt-1 text-[11px] font-semibold ${isSelected ? "text-brand-green-dark" : "text-muted-foreground"}`}>
+                          {cat.count} candidate{cat.count === 1 ? "" : "s"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Target Breakdown Strip */}
+              <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/40 p-3 border border-border text-center">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total In Batch</span>
+                  <p className="text-base font-extrabold text-foreground">{bulkApproveTargetApps.all.length}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-dark">Eligible to Approve</span>
+                  <p className="text-base font-extrabold text-brand-green-dark">{bulkApproveTargetApps.eligible.length}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Already Approved</span>
+                  <p className="text-base font-extrabold text-muted-foreground">{bulkApproveTargetApps.alreadyApproved.length}</p>
+                </div>
+              </div>
+
+              {/* Timeline Message Note */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  2. Status Timeline Message (Visible on Candidate Dossier)
+                </label>
+                <Input
+                  className="h-10 text-xs font-normal"
+                  value={bulkApproveTimelineMessage}
+                  onChange={(e) => setBulkApproveTimelineMessage(e.target.value)}
+                  placeholder="e.g. Your application has been approved for the scholarship award."
+                />
+              </div>
+
+              {/* In-Platform Portal Message Notification */}
+              <div className="rounded-xl border border-brand-green/30 bg-brand-green-soft/40 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-brand-green-dark">
+                    <CheckCircle2 className="h-4 w-4" /> In-Platform Portal Notification (Included)
+                  </div>
+                  <span className="rounded-full bg-brand-green-dark text-white px-2 py-0.5 text-[10px] font-extrabold">
+                    HIGH PRIORITY
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Notification Subject
+                  </label>
+                  <Input
+                    className="h-9 text-xs font-normal bg-background"
+                    value={bulkApprovePortalSubject}
+                    onChange={(e) => setBulkApprovePortalSubject(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Notification Message Body
+                  </label>
+                  <Textarea
+                    rows={3}
+                    className="text-xs font-normal bg-background leading-relaxed"
+                    value={bulkApprovePortalBody}
+                    onChange={(e) => setBulkApprovePortalBody(e.target.value)}
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Candidates will receive an unread badge and a prominent notification banner upon logging in to their portal.
+                  </p>
+                </div>
+              </div>
+
+              {/* Email Toggle Option */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="bulkApproveSendEmail"
+                  checked={bulkApproveSendEmail}
+                  onChange={(e) => setBulkApproveSendEmail(e.target.checked)}
+                  className="h-4 w-4 rounded border-input text-brand-green-dark accent-brand-green"
+                />
+                <label htmlFor="bulkApproveSendEmail" className="text-xs font-medium text-foreground cursor-pointer">
+                  Also attempt external email notifications via Resend / SMTP
+                </label>
+              </div>
+
+              {/* Feedback alert */}
+              {bulkApproveFeedback && (
+                <div
+                  className={`rounded-lg p-3 text-xs font-bold ${
+                    bulkApproveFeedback.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      : "bg-destructive/10 text-destructive border border-destructive/20"
+                  }`}
+                >
+                  {bulkApproveFeedback.text}
+                </div>
+              )}
+            </div>
+
+            {/* Footer actions */}
+            <div className="mt-4 flex items-center justify-end gap-3 pt-3 border-t border-border">
+              <Button
+                variant="outline"
+                disabled={bulkApproving}
+                onClick={() => setBulkApproveModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold"
+                disabled={bulkApproving || bulkApproveTargetApps.eligible.length === 0}
+                onClick={() => void handleBulkApprove()}
+              >
+                <Award className="mr-1.5 h-4 w-4 text-brand-orange" />
+                {bulkApproving
+                  ? "Approving candidates…"
+                  : `Confirm & Approve ${bulkApproveTargetApps.eligible.length} Candidate${bulkApproveTargetApps.eligible.length === 1 ? "" : "s"}`}
+              </Button>
             </div>
           </div>
         </div>

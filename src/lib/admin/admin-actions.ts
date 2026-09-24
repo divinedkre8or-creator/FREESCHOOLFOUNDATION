@@ -23,6 +23,14 @@ const updateStatusSchema = z.object({
   internalReason: z.string().optional(),
 });
 
+const bulkApproveSchema = z.object({
+  accessToken: z.string().min(20),
+  applicationIds: z.array(z.string().uuid()).min(1),
+  applicantMessage: z.string().optional(),
+  portalMessageSubject: z.string().optional(),
+  portalMessageBody: z.string().optional(),
+});
+
 const updateDocStatusSchema = z.object({
   accessToken: z.string().min(20),
   applicationId: z.string().uuid(),
@@ -524,6 +532,131 @@ export const dispatchPortalMessageServerFn = createServerFn({ method: "POST" })
     return { success: true, count: data.applicationIds.length };
   });
 
+// 8. Bulk Approve Applications & Send In-Platform Notification
+export const bulkApproveApplicationsServerFn = createServerFn({ method: "POST" })
+  .validator(bulkApproveSchema)
+  .handler(async ({ data }) => {
+    const { userData, adminClient } = await verifyStaffAndGetClients(data.accessToken);
+
+    if (!data.applicationIds || data.applicationIds.length === 0) {
+      throw new Error("No applications selected for bulk approval.");
+    }
+
+    // 1. Fetch target applications that are not already approved or enrolled
+    const { data: targetApps, error: fetchErr } = await adminClient
+      .from("applications")
+      .select("id, status, applicant_id, application_number, campaign_id")
+      .in("id", data.applicationIds);
+
+    if (fetchErr) {
+      console.error("Bulk approve fetch error:", fetchErr);
+      throw new Error("Failed to load selected applications for bulk approval.");
+    }
+
+    const eligibleApps = (targetApps ?? []).filter(
+      (app) => app.status !== "approved" && app.status !== "enrolled"
+    );
+
+    if (eligibleApps.length === 0) {
+      return {
+        success: true,
+        approvedCount: 0,
+        message: "All selected applications are already approved or enrolled.",
+      };
+    }
+
+    const eligibleIds = eligibleApps.map((a) => a.id);
+    const now = new Date().toISOString();
+    const defaultTimelineMsg =
+      data.applicantMessage?.trim() ||
+      "Congratulations! Your application has been approved for the scholarship award.";
+
+    // 2. Batch update status to 'approved'
+    const { error: updateErr } = await adminClient
+      .from("applications")
+      .update({
+        status: "approved",
+        updated_at: now,
+      })
+      .in("id", eligibleIds);
+
+    if (updateErr) {
+      console.error("Bulk approve update error:", updateErr);
+      throw new Error("Failed to batch update application statuses: " + updateErr.message);
+    }
+
+    // 3. Batch insert status history
+    const historyRows = eligibleApps.map((app) => ({
+      application_id: app.id,
+      changed_by: userData.user.id,
+      from_status: app.status,
+      to_status: "approved",
+      applicant_message: defaultTimelineMsg,
+      internal_reason: "Bulk approved by authorized staff",
+      created_at: now,
+    }));
+
+    const { error: historyErr } = await adminClient
+      .from("application_status_history")
+      .insert(historyRows);
+
+    if (historyErr) {
+      console.warn("Bulk approve history insert warning:", historyErr);
+    }
+
+    // 4. Dispatch in-platform portal notification
+    const campaignId = eligibleApps[0]?.campaign_id || "20000000-0000-0000-0000-000000000001";
+    const subject =
+      data.portalMessageSubject?.trim() ||
+      "Congratulations! Scholarship Application Approved";
+    const body =
+      data.portalMessageBody?.trim() ||
+      "Dear Candidate,\n\nWe are pleased to inform you that your application for The Free School Foundation Scholarship has been officially APPROVED.\n\nPlease log in to your portal to review your admission details, official records, and upcoming onboarding schedule.";
+
+    const { data: messageRecord, error: msgErr } = await adminClient
+      .from("messages")
+      .insert({
+        campaign_id: campaignId,
+        sender_id: userData.user.id,
+        subject,
+        body,
+        channel: "portal",
+        priority: "high",
+        idempotency_key: `bulk_approve_${userData.user.id}_${Date.now()}`,
+      })
+      .select("id")
+      .single();
+
+    if (!msgErr && messageRecord?.id) {
+      const recipients = eligibleApps.map((app) => ({
+        message_id: messageRecord.id,
+        applicant_id: app.applicant_id,
+        application_id: app.id,
+        delivery_status: "delivered" as const,
+      }));
+
+      await adminClient.from("message_recipients").insert(recipients);
+    }
+
+    // 5. Record audit event
+    await adminClient.from("audit_events").insert({
+      actor_id: userData.user.id,
+      action: "application.bulk_approved",
+      object_type: "application_batch",
+      outcome: "success",
+      metadata: {
+        total_requested: data.applicationIds.length,
+        approved_count: eligibleIds.length,
+        application_ids: eligibleIds,
+      },
+    });
+
+    return {
+      success: true,
+      approvedCount: eligibleIds.length,
+    };
+  });
+
 // 8. Delete Application Record
 export const deleteApplicationRecordServerFn = createServerFn({ method: "POST" })
   .validator(deleteInputSchema)
@@ -695,6 +828,28 @@ export async function adminDispatchPortalMessage(input: {
       subject: input.subject,
       body: input.body,
       priority: input.priority || "normal",
+    },
+  });
+}
+
+export async function adminBulkApproveApplications(input: {
+  applicationIds: string[];
+  applicantMessage?: string;
+  portalMessageSubject?: string;
+  portalMessageBody?: string;
+}) {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Your session has expired.");
+
+  return await bulkApproveApplicationsServerFn({
+    data: {
+      accessToken,
+      applicationIds: input.applicationIds,
+      applicantMessage: input.applicantMessage,
+      portalMessageSubject: input.portalMessageSubject,
+      portalMessageBody: input.portalMessageBody,
     },
   });
 }
