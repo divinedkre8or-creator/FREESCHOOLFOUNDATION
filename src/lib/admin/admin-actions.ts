@@ -153,37 +153,103 @@ export const getRegisteredUsersServerFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<RegisteredUser[]> => {
     const { adminClient } = await verifyStaffAndGetClients(data.accessToken);
 
-    // List all users from auth.users (supports up to 1000)
-    const { data: authUsersData, error: authUsersError } = await adminClient.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
+    // List all users from auth.users by looping through pages
+    const authUsers: Array<{
+      id: string;
+      email?: string;
+      email_confirmed_at?: string | null;
+      created_at: string;
+      last_sign_in_at?: string | null;
+      user_metadata?: Record<string, unknown>;
+    }> = [];
 
-    if (authUsersError) {
-      console.error("Failed to list auth users:", authUsersError);
-      throw new Error("Failed to load registered users.");
+    let authPage = 1;
+    const AUTH_PER_PAGE = 1000;
+    while (true) {
+      const { data: authUsersData, error: authUsersError } = await adminClient.auth.admin.listUsers({
+        page: authPage,
+        perPage: AUTH_PER_PAGE,
+      });
+
+      if (authUsersError) {
+        console.error("Failed to list auth users page " + authPage + ":", authUsersError);
+        throw new Error("Failed to load registered users.");
+      }
+
+      const users = authUsersData?.users ?? [];
+      authUsers.push(...(users as unknown as typeof authUsers));
+      if (users.length < AUTH_PER_PAGE) {
+        break;
+      }
+      authPage++;
     }
 
-    const authUsers = authUsersData?.users ?? [];
+    // Fetch all applications in chunks of 1000
+    const allApps: Array<{
+      id: string;
+      applicant_id: string;
+      status: string;
+      application_number: string | null;
+      level: string | null;
+      personal: Record<string, unknown> | null;
+      created_at: string;
+      programmes: { name?: string } | null;
+    }> = [];
 
-    // Fetch all applications
-    const { data: apps } = await adminClient
-      .from("applications")
-      .select("id, applicant_id, status, application_number, level, personal, created_at, programmes(name)")
-      .order("created_at", { ascending: false });
+    let appFrom = 0;
+    const APP_CHUNK = 1000;
+    while (true) {
+      const { data: appsChunk, error: appsError } = await adminClient
+        .from("applications")
+        .select("id, applicant_id, status, application_number, level, personal, created_at, programmes(name)")
+        .order("created_at", { ascending: false })
+        .range(appFrom, appFrom + APP_CHUNK - 1);
 
-    // Fetch all profiles
-    const { data: profiles } = await adminClient
-      .from("profiles")
-      .select("user_id, first_name, last_name, phone");
+      if (appsError) {
+        console.error("Failed to fetch applications chunk:", appsError);
+        break;
+      }
+
+      if (!appsChunk || appsChunk.length === 0) break;
+      allApps.push(...(appsChunk as unknown as typeof allApps));
+      if (appsChunk.length < APP_CHUNK) break;
+      appFrom += APP_CHUNK;
+    }
+
+    // Fetch all profiles in chunks of 1000
+    const allProfiles: Array<{
+      user_id: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      phone: string | null;
+    }> = [];
+
+    let profFrom = 0;
+    const PROF_CHUNK = 1000;
+    while (true) {
+      const { data: profilesChunk, error: profilesError } = await adminClient
+        .from("profiles")
+        .select("user_id, first_name, last_name, phone")
+        .range(profFrom, profFrom + PROF_CHUNK - 1);
+
+      if (profilesError) {
+        console.error("Failed to fetch profiles chunk:", profilesError);
+        break;
+      }
+
+      if (!profilesChunk || profilesChunk.length === 0) break;
+      allProfiles.push(...(profilesChunk as unknown as typeof allProfiles));
+      if (profilesChunk.length < PROF_CHUNK) break;
+      profFrom += PROF_CHUNK;
+    }
 
     const profileMap = new Map<string, { first_name?: string | null; last_name?: string | null; phone?: string | null }>();
-    (profiles ?? []).forEach((p) => {
+    allProfiles.forEach((p) => {
       if (p.user_id) profileMap.set(p.user_id, p);
     });
 
     const appMap = new Map<string, Record<string, unknown>>();
-    (apps ?? []).forEach((app) => {
+    allApps.forEach((app) => {
       if (app.applicant_id) {
         appMap.set(String(app.applicant_id), app as unknown as Record<string, unknown>);
       }
@@ -228,74 +294,86 @@ export const getAdminApplicationsServerFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { adminClient } = await verifyStaffAndGetClients(data.accessToken);
 
-    const { data: rows, error } = await adminClient
-      .from("applications")
-      .select(`
-        id,
-        application_number,
-        applicant_id,
-        campaign_id,
-        programme_id,
-        level,
-        status,
-        current_step,
-        personal,
-        education,
-        scholarship_responses,
-        communication_consent,
-        declaration_accepted_at,
-        submitted_at,
-        created_at,
-        updated_at,
-        programmes (
+    const allRows: unknown[] = [];
+    let from = 0;
+    const CHUNK_SIZE = 1000;
+
+    while (true) {
+      const { data: rows, error } = await adminClient
+        .from("applications")
+        .select(`
           id,
-          name,
-          slug
-        ),
-        application_documents (
-          id,
-          document_type,
-          display_name,
-          storage_path,
-          mime_type,
-          size_bytes,
-          scan_status,
-          uploaded_at,
-          requested_at
-        ),
-        application_status_history (
-          id,
-          from_status,
-          to_status,
-          applicant_message,
-          internal_reason,
-          created_at
-        ),
-        internal_notes (
-          id,
-          author_id,
-          body,
-          created_at
-        ),
-        message_recipients (
-          message_id,
-          read_at,
-          messages (
+          application_number,
+          applicant_id,
+          campaign_id,
+          programme_id,
+          level,
+          status,
+          current_step,
+          personal,
+          education,
+          scholarship_responses,
+          communication_consent,
+          declaration_accepted_at,
+          submitted_at,
+          created_at,
+          updated_at,
+          programmes (
             id,
-            subject,
+            name,
+            slug
+          ),
+          application_documents (
+            id,
+            document_type,
+            display_name,
+            storage_path,
+            mime_type,
+            size_bytes,
+            scan_status,
+            uploaded_at,
+            requested_at
+          ),
+          application_status_history (
+            id,
+            from_status,
+            to_status,
+            applicant_message,
+            internal_reason,
+            created_at
+          ),
+          internal_notes (
+            id,
+            author_id,
             body,
             created_at
+          ),
+          message_recipients (
+            message_id,
+            read_at,
+            messages (
+              id,
+              subject,
+              body,
+              created_at
+            )
           )
-        )
-      `)
-      .order("created_at", { ascending: false });
+        `)
+        .order("created_at", { ascending: false })
+        .range(from, from + CHUNK_SIZE - 1);
 
-    if (error) {
-      console.error("Admin applications query error:", error);
-      throw new Error("Failed to load applications.");
+      if (error) {
+        console.error("Admin applications query error:", error);
+        throw new Error("Failed to load applications: " + error.message);
+      }
+
+      if (!rows || rows.length === 0) break;
+      allRows.push(...rows);
+      if (rows.length < CHUNK_SIZE) break;
+      from += CHUNK_SIZE;
     }
 
-    return rows ?? [];
+    return allRows;
   });
 
 // 3. Update Application Status
@@ -542,70 +620,11 @@ export const bulkApproveApplicationsServerFn = createServerFn({ method: "POST" }
       throw new Error("No applications selected for bulk approval.");
     }
 
-    // 1. Fetch target applications that are not already approved or enrolled
-    const { data: targetApps, error: fetchErr } = await adminClient
-      .from("applications")
-      .select("id, status, applicant_id, application_number, campaign_id")
-      .in("id", data.applicationIds);
-
-    if (fetchErr) {
-      console.error("Bulk approve fetch error:", fetchErr);
-      throw new Error("Failed to load selected applications for bulk approval.");
-    }
-
-    const eligibleApps = (targetApps ?? []).filter(
-      (app) => app.status !== "approved" && app.status !== "enrolled"
-    );
-
-    if (eligibleApps.length === 0) {
-      return {
-        success: true,
-        approvedCount: 0,
-        message: "All selected applications are already approved or enrolled.",
-      };
-    }
-
-    const eligibleIds = eligibleApps.map((a) => a.id);
+    const BATCH_SIZE = 100;
     const now = new Date().toISOString();
     const defaultTimelineMsg =
       data.applicantMessage?.trim() ||
       "Congratulations! Your application has been approved for the scholarship award.";
-
-    // 2. Batch update status to 'approved'
-    const { error: updateErr } = await adminClient
-      .from("applications")
-      .update({
-        status: "approved",
-        updated_at: now,
-      })
-      .in("id", eligibleIds);
-
-    if (updateErr) {
-      console.error("Bulk approve update error:", updateErr);
-      throw new Error("Failed to batch update application statuses: " + updateErr.message);
-    }
-
-    // 3. Batch insert status history
-    const historyRows = eligibleApps.map((app) => ({
-      application_id: app.id,
-      changed_by: userData.user.id,
-      from_status: app.status,
-      to_status: "approved",
-      applicant_message: defaultTimelineMsg,
-      internal_reason: "Bulk approved by authorized staff",
-      created_at: now,
-    }));
-
-    const { error: historyErr } = await adminClient
-      .from("application_status_history")
-      .insert(historyRows);
-
-    if (historyErr) {
-      console.warn("Bulk approve history insert warning:", historyErr);
-    }
-
-    // 4. Dispatch in-platform portal notification
-    const campaignId = eligibleApps[0]?.campaign_id || "20000000-0000-0000-0000-000000000001";
     const subject =
       data.portalMessageSubject?.trim() ||
       "Congratulations! Scholarship Application Approved";
@@ -613,32 +632,99 @@ export const bulkApproveApplicationsServerFn = createServerFn({ method: "POST" }
       data.portalMessageBody?.trim() ||
       "Dear Candidate,\n\nWe are pleased to inform you that your application for The Free School Foundation Scholarship has been officially APPROVED.\n\nPlease log in to your portal to review your admission details, official records, and upcoming onboarding schedule.";
 
-    const { data: messageRecord, error: msgErr } = await adminClient
-      .from("messages")
-      .insert({
-        campaign_id: campaignId,
-        sender_id: userData.user.id,
-        subject,
-        body,
-        channel: "portal",
-        priority: "high",
-        idempotency_key: `bulk_approve_${userData.user.id}_${Date.now()}`,
-      })
-      .select("id")
-      .single();
+    let totalApproved = 0;
+    const allApprovedIds: string[] = [];
 
-    if (!msgErr && messageRecord?.id) {
-      const recipients = eligibleApps.map((app) => ({
-        message_id: messageRecord.id,
-        applicant_id: app.applicant_id,
+    // Process all application IDs in safe chunks of 100 to prevent HTTP 414 URI Too Long errors
+    for (let i = 0; i < data.applicationIds.length; i += BATCH_SIZE) {
+      const chunkIds = data.applicationIds.slice(i, i + BATCH_SIZE);
+
+      // 1. Fetch eligible applications in this chunk
+      const { data: targetApps, error: fetchErr } = await adminClient
+        .from("applications")
+        .select("id, status, applicant_id, application_number, campaign_id")
+        .in("id", chunkIds);
+
+      if (fetchErr) {
+        console.error(`Bulk approve fetch error for batch ${i / BATCH_SIZE + 1}:`, fetchErr);
+        continue;
+      }
+
+      const eligibleApps = (targetApps ?? []).filter(
+        (app) => app.status !== "approved" && app.status !== "enrolled"
+      );
+
+      if (eligibleApps.length === 0) continue;
+      const eligibleIds = eligibleApps.map((a) => a.id);
+
+      // 2. Batch update status to 'approved' for this chunk
+      const { error: updateErr } = await adminClient
+        .from("applications")
+        .update({
+          status: "approved",
+          updated_at: now,
+        })
+        .in("id", eligibleIds);
+
+      if (updateErr) {
+        console.error(`Bulk approve update error for batch ${i / BATCH_SIZE + 1}:`, updateErr);
+        continue;
+      }
+
+      totalApproved += eligibleIds.length;
+      allApprovedIds.push(...eligibleIds);
+
+      // 3. Batch insert status history for this chunk
+      const historyRows = eligibleApps.map((app) => ({
         application_id: app.id,
-        delivery_status: "delivered" as const,
+        changed_by: userData.user.id,
+        from_status: app.status,
+        to_status: "approved",
+        applicant_message: defaultTimelineMsg,
+        internal_reason: "Bulk approved by authorized staff",
+        created_at: now,
       }));
 
-      await adminClient.from("message_recipients").insert(recipients);
+      const { error: historyErr } = await adminClient
+        .from("application_status_history")
+        .insert(historyRows);
+
+      if (historyErr) {
+        console.warn(`Bulk approve history insert warning for batch ${i / BATCH_SIZE + 1}:`, historyErr);
+      }
+
+      // 4. Dispatch in-platform portal notification for this chunk
+      const campaignId = eligibleApps[0]?.campaign_id || "20000000-0000-0000-0000-000000000001";
+      const { data: messageRecord, error: msgErr } = await adminClient
+        .from("messages")
+        .insert({
+          campaign_id: campaignId,
+          sender_id: userData.user.id,
+          subject,
+          body,
+          channel: "portal",
+          priority: "high",
+          idempotency_key: `bulk_approve_${userData.user.id}_${Date.now()}_${i}`,
+        })
+        .select("id")
+        .single();
+
+      if (!msgErr && messageRecord?.id) {
+        const recipients = eligibleApps.map((app) => ({
+          message_id: messageRecord.id,
+          applicant_id: app.applicant_id,
+          application_id: app.id,
+          delivery_status: "delivered" as const,
+        }));
+
+        const { error: recipErr } = await adminClient.from("message_recipients").insert(recipients);
+        if (recipErr) {
+          console.warn(`Bulk approve recipient insert warning for batch ${i / BATCH_SIZE + 1}:`, recipErr);
+        }
+      }
     }
 
-    // 5. Record audit event
+    // 5. Record consolidated audit event
     await adminClient.from("audit_events").insert({
       actor_id: userData.user.id,
       action: "application.bulk_approved",
@@ -646,14 +732,15 @@ export const bulkApproveApplicationsServerFn = createServerFn({ method: "POST" }
       outcome: "success",
       metadata: {
         total_requested: data.applicationIds.length,
-        approved_count: eligibleIds.length,
-        application_ids: eligibleIds,
+        approved_count: totalApproved,
+        application_ids_sample: allApprovedIds.slice(0, 50),
       },
     });
 
     return {
       success: true,
-      approvedCount: eligibleIds.length,
+      approvedCount: totalApproved,
+      totalRequested: data.applicationIds.length,
     };
   });
 
