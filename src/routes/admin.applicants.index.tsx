@@ -16,6 +16,7 @@ import {
   Filter,
   HelpCircle,
   Info,
+  Loader2,
   Mail,
   Phone,
   PhoneCall,
@@ -183,7 +184,7 @@ function ApplicantsPage() {
   const [copiedPhoneText, setCopiedPhoneText] = useState(false);
   const [bulkApproveModalOpen, setBulkApproveModalOpen] = useState(false);
   const [bulkApproveTargetCategory, setBulkApproveTargetCategory] = useState<
-    "selected_only" | "shortlisted" | "under_review" | "current_filter"
+    "selected_only" | "shortlisted" | "under_review" | "submitted" | "all_eligible" | "current_filter"
   >("selected_only");
   const [bulkApproveTimelineMessage, setBulkApproveTimelineMessage] = useState(
     "Congratulations! Your scholarship application has been approved."
@@ -196,6 +197,8 @@ function ApplicantsPage() {
   );
   const [bulkApproveSendEmail, setBulkApproveSendEmail] = useState(false);
   const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkApproveProgress, setBulkApproveProgress] = useState<{ current: number; total: number } | null>(null);
+  const [quickApprovingId, setQuickApprovingId] = useState<string | null>(null);
   const [bulkApproveFeedback, setBulkApproveFeedback] = useState<{
     type: "success" | "error";
     text: string;
@@ -739,6 +742,12 @@ function ApplicantsPage() {
       targets = applications.filter(
         (a) => a.status === "Under Review" || a.status === "Submitted"
       );
+    } else if (bulkApproveTargetCategory === "submitted") {
+      targets = applications.filter((a) => a.status === "Submitted");
+    } else if (bulkApproveTargetCategory === "all_eligible") {
+      targets = applications.filter(
+        (a) => a.status !== "Approved" && a.status !== "Enrolled"
+      );
     } else if (bulkApproveTargetCategory === "current_filter") {
       targets = filtered;
     }
@@ -761,23 +770,63 @@ function ApplicantsPage() {
     if (bulkApproveTargetApps.eligible.length === 0) return;
     setBulkApproving(true);
     setBulkApproveFeedback(null);
+    setBulkApproveProgress(null);
 
     try {
-      const { adminBulkApproveApplications } = await import("@/lib/admin/admin-actions");
-      const appIds = bulkApproveTargetApps.eligible.map((a) => a.id);
+      const { adminBulkApproveApplications, adminBulkApproveByCategory } = await import(
+        "@/lib/admin/admin-actions"
+      );
 
-      const res = await adminBulkApproveApplications({
-        applicationIds: appIds,
-        applicantMessage: bulkApproveTimelineMessage.trim() || undefined,
-        portalMessageSubject: bulkApprovePortalSubject.trim() || undefined,
-        portalMessageBody: bulkApprovePortalBody.trim() || undefined,
-      });
+      let totalApproved = 0;
+
+      // 1. If category-level preset is selected, use instant SQL server function (100ms)
+      if (
+        bulkApproveTargetCategory === "shortlisted" ||
+        bulkApproveTargetCategory === "under_review" ||
+        bulkApproveTargetCategory === "submitted" ||
+        bulkApproveTargetCategory === "all_eligible"
+      ) {
+        setBulkApproveProgress({ current: 0, total: bulkApproveTargetApps.eligible.length });
+        const res = await adminBulkApproveByCategory({
+          category: bulkApproveTargetCategory,
+          applicantMessage: bulkApproveTimelineMessage.trim() || undefined,
+          portalMessageSubject: bulkApprovePortalSubject.trim() || undefined,
+          portalMessageBody: bulkApprovePortalBody.trim() || undefined,
+        });
+        totalApproved = res.approvedCount;
+        setBulkApproveProgress({
+          current: bulkApproveTargetApps.eligible.length,
+          total: bulkApproveTargetApps.eligible.length,
+        });
+      } else {
+        // 2. Selected checkboxes or current filter: batch in small chunks of 50 to guarantee zero HTTP 414 / payload limits
+        const appIds = bulkApproveTargetApps.eligible.map((a) => a.id);
+        const BATCH_SIZE = 50;
+        setBulkApproveProgress({ current: 0, total: appIds.length });
+
+        for (let i = 0; i < appIds.length; i += BATCH_SIZE) {
+          const chunk = appIds.slice(i, i + BATCH_SIZE);
+          const res = await adminBulkApproveApplications({
+            applicationIds: chunk,
+            applicantMessage: bulkApproveTimelineMessage.trim() || undefined,
+            portalMessageSubject: bulkApprovePortalSubject.trim() || undefined,
+            portalMessageBody: bulkApprovePortalBody.trim() || undefined,
+          });
+          totalApproved += res.approvedCount;
+          setBulkApproveProgress({
+            current: Math.min(i + BATCH_SIZE, appIds.length),
+            total: appIds.length,
+          });
+        }
+      }
 
       if (bulkApproveSendEmail) {
         try {
           const { sendPlatformEmail } = await import("@/lib/email/platform-email");
+          const appIds = bulkApproveTargetApps.eligible.map((a) => a.id);
+          // Limit email broadcast to avoid provider rate limiting
           await sendPlatformEmail({
-            applicationIds: appIds,
+            applicationIds: appIds.slice(0, 50),
             event: "status",
           });
         } catch (emailErr) {
@@ -787,7 +836,7 @@ function ApplicantsPage() {
 
       setBulkApproveFeedback({
         type: "success",
-        text: `Successfully approved ${res.approvedCount} candidate${res.approvedCount === 1 ? "" : "s"} and dispatched high-priority portal notifications!`,
+        text: `Successfully approved ${totalApproved} candidate${totalApproved === 1 ? "" : "s"} and dispatched high-priority portal notifications!`,
       });
 
       setSelectedIds([]);
@@ -796,6 +845,7 @@ function ApplicantsPage() {
       setTimeout(() => {
         setBulkApproveModalOpen(false);
         setBulkApproveFeedback(null);
+        setBulkApproveProgress(null);
       }, 2500);
     } catch (err) {
       setBulkApproveFeedback({
@@ -804,6 +854,31 @@ function ApplicantsPage() {
       });
     } finally {
       setBulkApproving(false);
+    }
+  };
+
+  const handleQuickApprove = async (appId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuickApprovingId(appId);
+    try {
+      const { adminUpdateApplicationStatus } = await import("@/lib/admin/admin-actions");
+      await adminUpdateApplicationStatus(
+        appId,
+        "approved",
+        "Congratulations! Your scholarship application has been approved."
+      );
+      // Optimistically update local application state
+      setState((prev) => ({
+        ...prev,
+        applications: prev.applications.map((app) =>
+          app.id === appId ? { ...app, status: "Approved" } : app
+        ),
+      }));
+    } catch (err) {
+      console.error("Quick approve error:", err);
+      alert(err instanceof Error ? err.message : "Failed to approve application.");
+    } finally {
+      setQuickApprovingId(null);
     }
   };
 
@@ -1143,9 +1218,27 @@ function ApplicantsPage() {
                       <span className="text-muted-foreground">
                         {app.documents.length} document{app.documents.length === 1 ? "" : "s"} attached
                       </span>
-                      <span className="flex items-center gap-1 font-bold text-brand-green-dark">
-                        Scrutinize Record <ArrowRight className="h-3.5 w-3.5" />
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {app.status !== "Approved" && app.status !== "Enrolled" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 gap-1 px-2.5 text-[11px] font-bold text-emerald-700 border-emerald-600/40 hover:bg-emerald-50 active:bg-emerald-100"
+                            disabled={quickApprovingId === app.id}
+                            onClick={(e) => void handleQuickApprove(app.id, e)}
+                          >
+                            {quickApprovingId === app.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                            )}
+                            Approve
+                          </Button>
+                        )}
+                        <span className="flex items-center gap-1 font-bold text-brand-green-dark">
+                          Scrutinize <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1173,7 +1266,7 @@ function ApplicantsPage() {
                       <th className="px-5 py-3">Contact</th>
                       <th className="px-5 py-3">Submitted</th>
                       <th className="px-5 py-3">Status</th>
-                      <th className="w-32 px-5 py-3 text-right">Action</th>
+                      <th className="w-48 px-5 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -1214,18 +1307,36 @@ function ApplicantsPage() {
                         <td className="px-5 py-4">
                           <StatusBadge status={app.status} />
                         </td>
-                        <td className="px-5 py-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1 text-xs font-bold text-brand-green-dark hover:bg-brand-green-soft hover:text-brand-green-dark"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void navigate({ to: "/admin/applicants/$applicationId", params: { applicationId: app.id } });
-                            }}
-                          >
-                            <Eye className="h-3.5 w-3.5" /> Inspect
-                          </Button>
+                        <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {app.status !== "Approved" && app.status !== "Enrolled" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 gap-1 text-xs font-bold text-emerald-700 border-emerald-600/40 hover:bg-emerald-50 active:bg-emerald-100"
+                                disabled={quickApprovingId === app.id}
+                                onClick={(e) => void handleQuickApprove(app.id, e)}
+                              >
+                                {quickApprovingId === app.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                                ) : (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                )}
+                                Approve
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1 text-xs font-bold text-brand-green-dark hover:bg-brand-green-soft hover:text-brand-green-dark"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void navigate({ to: "/admin/applicants/$applicationId", params: { applicationId: app.id } });
+                              }}
+                            >
+                              <Eye className="h-3.5 w-3.5" /> Inspect
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1985,12 +2096,14 @@ function ApplicantsPage() {
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
                   1. Target Batch Selection
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {[
                     { id: "selected_only", label: "Selected Checkboxes", count: selectedIds.length },
                     { id: "shortlisted", label: "All Shortlisted", count: stats.shortlisted },
                     { id: "under_review", label: "Under Review", count: stats.underReview },
-                    { id: "current_filter", label: "Current View", count: filtered.length },
+                    { id: "submitted", label: "All Applications", count: applications.length },
+                    { id: "all_eligible", label: "All Eligible Unapproved", count: Math.max(0, stats.total - stats.approved) },
+                    { id: "current_filter", label: "Current Table View", count: filtered.length },
                   ].map((cat) => {
                     const isSelected = bulkApproveTargetCategory === cat.id;
                     const isDisabled = cat.id === "selected_only" && selectedIds.length === 0;
@@ -1998,7 +2111,7 @@ function ApplicantsPage() {
                       <button
                         key={cat.id}
                         type="button"
-                        disabled={isDisabled}
+                        disabled={isDisabled || bulkApproving}
                         onClick={() => setBulkApproveTargetCategory(cat.id as any)}
                         className={`flex flex-col items-start justify-between rounded-xl border p-2.5 text-left transition-all ${
                           isDisabled
@@ -2034,6 +2147,32 @@ function ApplicantsPage() {
                 </div>
               </div>
 
+              {/* Live Batch Progress Bar */}
+              {bulkApproveProgress && (
+                <div className="rounded-xl border border-brand-green/40 bg-brand-green-soft/50 p-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-brand-green-dark mb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-green-dark" />
+                      Processing Approvals…
+                    </span>
+                    <span>
+                      {bulkApproveProgress.current} / {bulkApproveProgress.total} (
+                      {Math.round((bulkApproveProgress.current / Math.max(1, bulkApproveProgress.total)) * 100)}%)
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-secondary/80 overflow-hidden">
+                    <div
+                      className="h-full bg-brand-green-dark transition-all duration-300 rounded-full"
+                      style={{
+                        width: `${Math.round(
+                          (bulkApproveProgress.current / Math.max(1, bulkApproveProgress.total)) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Timeline Message Note */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
@@ -2044,6 +2183,7 @@ function ApplicantsPage() {
                   value={bulkApproveTimelineMessage}
                   onChange={(e) => setBulkApproveTimelineMessage(e.target.value)}
                   placeholder="e.g. Your application has been approved for the scholarship award."
+                  disabled={bulkApproving}
                 />
               </div>
 
@@ -2066,6 +2206,7 @@ function ApplicantsPage() {
                     className="h-9 text-xs font-normal bg-background"
                     value={bulkApprovePortalSubject}
                     onChange={(e) => setBulkApprovePortalSubject(e.target.value)}
+                    disabled={bulkApproving}
                   />
                 </div>
 
@@ -2078,6 +2219,7 @@ function ApplicantsPage() {
                     className="text-xs font-normal bg-background leading-relaxed"
                     value={bulkApprovePortalBody}
                     onChange={(e) => setBulkApprovePortalBody(e.target.value)}
+                    disabled={bulkApproving}
                   />
                   <p className="mt-1 text-[10px] text-muted-foreground">
                     Candidates will receive an unread badge and banner upon logging in to their portal.
@@ -2092,6 +2234,7 @@ function ApplicantsPage() {
                   id="bulkApproveSendEmail"
                   checked={bulkApproveSendEmail}
                   onChange={(e) => setBulkApproveSendEmail(e.target.checked)}
+                  disabled={bulkApproving}
                   className="h-4 w-4 rounded border-input text-brand-green-dark accent-brand-green"
                 />
                 <label htmlFor="bulkApproveSendEmail" className="text-xs font-medium text-foreground cursor-pointer">

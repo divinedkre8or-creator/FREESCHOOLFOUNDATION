@@ -31,6 +31,14 @@ const bulkApproveSchema = z.object({
   portalMessageBody: z.string().optional(),
 });
 
+const bulkApproveCategorySchema = z.object({
+  accessToken: z.string().min(20),
+  category: z.enum(["shortlisted", "under_review", "submitted", "all_eligible"]),
+  applicantMessage: z.string().optional(),
+  portalMessageSubject: z.string().optional(),
+  portalMessageBody: z.string().optional(),
+});
+
 const updateDocStatusSchema = z.object({
   accessToken: z.string().min(20),
   applicationId: z.string().uuid(),
@@ -744,6 +752,148 @@ export const bulkApproveApplicationsServerFn = createServerFn({ method: "POST" }
     };
   });
 
+// 8b. Instant Category-Level Bulk Approve (Ultra-Fast SQL Execution)
+export const bulkApproveCategoryServerFn = createServerFn({ method: "POST" })
+  .validator(bulkApproveCategorySchema)
+  .handler(async ({ data }) => {
+    const { userData, adminClient } = await verifyStaffAndGetClients(data.accessToken);
+
+    let statusList: string[] = [];
+    if (data.category === "shortlisted") {
+      statusList = ["Shortlisted", "shortlisted"];
+    } else if (data.category === "under_review") {
+      statusList = ["Under Review", "under_review", "Submitted", "submitted"];
+    } else if (data.category === "submitted") {
+      statusList = ["Submitted", "submitted"];
+    } else {
+      statusList = [
+        "Submitted",
+        "submitted",
+        "Under Review",
+        "under_review",
+        "Shortlisted",
+        "shortlisted",
+        "Additional Documents Required",
+        "additional_documents_required",
+        "Draft",
+        "draft",
+      ];
+    }
+
+    const now = new Date().toISOString();
+    const defaultTimelineMsg =
+      data.applicantMessage?.trim() ||
+      "Congratulations! Your application has been approved for the scholarship award.";
+
+    // 1. Fetch matching applications directly
+    const { data: targetApps, error: fetchErr } = await adminClient
+      .from("applications")
+      .select("id, status, applicant_id, campaign_id")
+      .in("status", statusList);
+
+    if (fetchErr) {
+      console.error("Bulk approve category fetch error:", fetchErr);
+      throw new Error("Failed to fetch applications in category: " + fetchErr.message);
+    }
+
+    const eligibleApps = (targetApps ?? []).filter(
+      (app) => app.status !== "approved" && app.status !== "enrolled"
+    );
+
+    if (eligibleApps.length === 0) {
+      return {
+        success: true,
+        approvedCount: 0,
+        message: "No eligible unapproved applications found in this category.",
+      };
+    }
+
+    const eligibleIds = eligibleApps.map((a) => a.id);
+
+    // 2. Direct fast SQL update in chunks of 500
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < eligibleIds.length; i += CHUNK_SIZE) {
+      const chunkIds = eligibleIds.slice(i, i + CHUNK_SIZE);
+      const { error: updateErr } = await adminClient
+        .from("applications")
+        .update({ status: "approved", updated_at: now })
+        .in("id", chunkIds);
+
+      if (updateErr) {
+        console.error("Bulk approve category update error:", updateErr);
+      }
+    }
+
+    // 3. Batch insert status history
+    for (let i = 0; i < eligibleApps.length; i += CHUNK_SIZE) {
+      const chunkApps = eligibleApps.slice(i, i + CHUNK_SIZE);
+      const historyRows = chunkApps.map((app) => ({
+        application_id: app.id,
+        changed_by: userData.user.id,
+        from_status: app.status,
+        to_status: "approved",
+        applicant_message: defaultTimelineMsg,
+        internal_reason: `Bulk approved by category (${data.category})`,
+        created_at: now,
+      }));
+
+      await adminClient.from("application_status_history").insert(historyRows);
+    }
+
+    // 4. Dispatch portal message
+    const campaignId = eligibleApps[0]?.campaign_id || "20000000-0000-0000-0000-000000000001";
+    const subject =
+      data.portalMessageSubject?.trim() ||
+      "Congratulations! Scholarship Application Approved";
+    const body =
+      data.portalMessageBody?.trim() ||
+      "Dear Candidate,\n\nWe are pleased to inform you that your application for The Free School Foundation Scholarship has been officially APPROVED.\n\nPlease log in to your portal to review your admission details, official records, and upcoming onboarding schedule.";
+
+    const { data: messageRecord } = await adminClient
+      .from("messages")
+      .insert({
+        campaign_id: campaignId,
+        sender_id: userData.user.id,
+        subject,
+        body,
+        channel: "portal",
+        priority: "high",
+        idempotency_key: `bulk_approve_cat_${data.category}_${Date.now()}`,
+      })
+      .select("id")
+      .single();
+
+    if (messageRecord?.id) {
+      const recipients = eligibleApps.map((app) => ({
+        message_id: messageRecord.id,
+        applicant_id: app.applicant_id,
+        application_id: app.id,
+        delivery_status: "delivered" as const,
+      }));
+
+      for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
+        await adminClient.from("message_recipients").insert(recipients.slice(i, i + CHUNK_SIZE));
+      }
+    }
+
+    // 5. Record consolidated audit event
+    await adminClient.from("audit_events").insert({
+      actor_id: userData.user.id,
+      action: "application.bulk_approved_category",
+      object_type: "application_category",
+      outcome: "success",
+      metadata: {
+        category: data.category,
+        approved_count: eligibleIds.length,
+      },
+    });
+
+    return {
+      success: true,
+      approvedCount: eligibleIds.length,
+    };
+  });
+
 // 8. Delete Application Record
 export const deleteApplicationRecordServerFn = createServerFn({ method: "POST" })
   .validator(deleteInputSchema)
@@ -934,6 +1084,28 @@ export async function adminBulkApproveApplications(input: {
     data: {
       accessToken,
       applicationIds: input.applicationIds,
+      applicantMessage: input.applicantMessage,
+      portalMessageSubject: input.portalMessageSubject,
+      portalMessageBody: input.portalMessageBody,
+    },
+  });
+}
+
+export async function adminBulkApproveByCategory(input: {
+  category: "shortlisted" | "under_review" | "submitted" | "all_eligible";
+  applicantMessage?: string;
+  portalMessageSubject?: string;
+  portalMessageBody?: string;
+}) {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Your session has expired.");
+
+  return await bulkApproveCategoryServerFn({
+    data: {
+      accessToken,
+      category: input.category,
       applicantMessage: input.applicantMessage,
       portalMessageSubject: input.portalMessageSubject,
       portalMessageBody: input.portalMessageBody,
