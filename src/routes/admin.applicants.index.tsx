@@ -1677,20 +1677,20 @@ function ApplicantsPage() {
 
       {/* Target & Copy Phone Numbers Modal */}
       {phoneModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-3xl rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-brand-green-soft p-2.5 text-brand-green-dark">
-                  <PhoneCall className="h-6 w-6" />
+            <div className="flex items-start justify-between border-b border-border pb-3 sm:pb-4 gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="rounded-xl bg-brand-green-soft p-2 sm:p-2.5 text-brand-green-dark shrink-0">
+                  <PhoneCall className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-extrabold text-foreground">
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-xl font-extrabold text-foreground truncate">
                     Target & Copy Phone Numbers
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Segment candidate contact numbers by category, programme, or stage for Bulk SMS & WhatsApp outreach.
+                  <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-2">
+                    Segment candidate contact numbers for Bulk SMS & WhatsApp broadcast.
                   </p>
                 </div>
               </div>
@@ -1698,20 +1698,20 @@ function ApplicantsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setPhoneModalOpen(false)}
-                className="h-8 w-8 p-0 rounded-full"
+                className="h-8 w-8 p-0 rounded-full shrink-0"
               >
                 ✕
               </Button>
             </div>
 
             {/* Modal Scrollable Content */}
-            <div className="mt-4 space-y-4 overflow-y-auto pr-1">
+            <div className="mt-3 sm:mt-4 space-y-3.5 sm:space-y-4 overflow-y-auto pr-1">
               {/* Category & Segment Selection */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
                   1. Choose Target Audience / Category
                 </label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {[
                     { id: "current_filter", label: "Current Table View", count: activeTab === "applications" ? filtered.length : filteredRegistered.length },
                     { id: "selected_only", label: "Selected Checkboxes", count: activeTab === "applications" ? selectedIds.length : selectedRegUserIds.length },
@@ -1752,7 +1752,7 @@ function ApplicantsPage() {
 
               {/* Secondary Filters (Programme & Level) */}
               {!["current_filter", "selected_only"].includes(phoneTargetCategory) && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-xl border border-border bg-secondary/20 p-3">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 rounded-xl border border-border bg-secondary/20 p-2.5 sm:p-3">
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
                       Filter by Programme / Department
@@ -1792,10 +1792,10 @@ function ApplicantsPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                     2. Phone Number Format
                   </label>
-                  <div className="flex rounded-lg border border-border p-1 bg-secondary/30">
+                  <div className="flex flex-col sm:flex-row rounded-lg border border-border p-1 bg-secondary/30 gap-1">
                     <button
                       type="button"
-                      className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-colors ${
+                      className={`flex-1 rounded-md py-1.5 px-2 text-xs font-bold transition-colors text-center ${
                         phoneFormat === "local"
                           ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
@@ -1806,7 +1806,7 @@ function ApplicantsPage() {
                     </button>
                     <button
                       type="button"
-                      className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-colors ${
+                      className={`flex-1 rounded-md py-1.5 px-2 text-xs font-bold transition-colors text-center ${
                         phoneFormat === "international"
                           ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
@@ -1822,10 +1822,10 @@ function ApplicantsPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                     3. List Delimiter / Separator
                   </label>
-                  <div className="flex rounded-lg border border-border p-1 bg-secondary/30">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 rounded-lg border border-border p-1 bg-secondary/30 gap-1">
                     <button
                       type="button"
-                      className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-colors ${
+                      className={`rounded-md py-1.5 px-2 text-xs font-bold transition-colors text-center ${
                         phoneDelimiter === ", "
                           ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
@@ -1836,7 +1836,7 @@ function ApplicantsPage() {
                     </button>
                     <button
                       type="button"
-                      className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-colors ${
+                      className={`rounded-md py-1.5 px-2 text-xs font-bold transition-colors text-center ${
                         phoneDelimiter === "\n"
                           ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
@@ -1847,7 +1847,7 @@ function ApplicantsPage() {
                     </button>
                     <button
                       type="button"
-                      className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-colors ${
+                      className={`rounded-md py-1.5 px-2 text-xs font-bold transition-colors text-center ${
                         phoneDelimiter === "; "
                           ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
@@ -1861,22 +1861,22 @@ function ApplicantsPage() {
               </div>
 
               {/* Statistics Pill Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl bg-secondary/40 p-3 border border-border">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Matching Dossiers</span>
-                  <p className="text-base font-extrabold text-foreground">{targetedPhoneResults.rawCount}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl bg-secondary/40 p-2.5 sm:p-3 border border-border">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate block">Matching</span>
+                  <p className="text-sm sm:text-base font-extrabold text-foreground">{targetedPhoneResults.rawCount}</p>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-dark">Valid Phone Numbers</span>
-                  <p className="text-base font-extrabold text-brand-green-dark">{targetedPhoneResults.records.length}</p>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-dark truncate block">Valid Phones</span>
+                  <p className="text-sm sm:text-base font-extrabold text-brand-green-dark">{targetedPhoneResults.records.length}</p>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Deduplicated Unique</span>
-                  <p className="text-base font-extrabold text-emerald-600">{targetedPhoneResults.uniqueCount}</p>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 truncate block">Unique</span>
+                  <p className="text-sm sm:text-base font-extrabold text-emerald-600">{targetedPhoneResults.uniqueCount}</p>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Missing / Blank</span>
-                  <p className="text-base font-extrabold text-muted-foreground">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate block">Missing</span>
+                  <p className="text-sm sm:text-base font-extrabold text-muted-foreground">
                     {Math.max(0, targetedPhoneResults.rawCount - targetedPhoneResults.records.length)}
                   </p>
                 </div>
@@ -1884,18 +1884,18 @@ function ApplicantsPage() {
 
               {/* Output Preview Area */}
               <div>
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Formatted Phone List Preview ({targetedPhoneResults.uniqueCount} numbers)
+                    Phone List Preview ({targetedPhoneResults.uniqueCount} numbers)
                   </label>
-                  <span className="text-[11px] text-muted-foreground font-medium">
-                    Ready for Bulk SMS Gateway / WhatsApp Broadcast
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">
+                    Ready for Bulk SMS & WhatsApp Broadcast
                   </span>
                 </div>
                 <Textarea
                   readOnly
                   rows={4}
-                  className="font-mono text-xs bg-secondary/20 select-all tracking-tight leading-relaxed"
+                  className="w-full font-mono text-xs bg-secondary/20 select-all tracking-tight leading-relaxed break-all"
                   value={targetedPhoneResults.textOutput || "No matching phone numbers found in this segment."}
                   placeholder="Extracted numbers will appear here..."
                 />
@@ -1903,29 +1903,30 @@ function ApplicantsPage() {
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="mt-4 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-3 border-t border-border">
+            <div className="mt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-border">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPhoneModalOpen(false)}
+                className="w-full sm:w-auto"
               >
                 Close
               </Button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={targetedPhoneResults.uniqueCount === 0}
                   onClick={downloadTargetedPhones}
-                  className="flex-1 sm:flex-none"
+                  className="w-full sm:w-auto"
                 >
                   <Download className="mr-1.5 h-4 w-4" />
                   Download CSV
                 </Button>
 
                 <Button
-                  className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold flex-1 sm:flex-none"
+                  className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold w-full sm:w-auto"
                   disabled={targetedPhoneResults.uniqueCount === 0}
                   onClick={() => void copyTargetedPhones()}
                 >
@@ -1949,20 +1950,20 @@ function ApplicantsPage() {
 
       {/* Bulk Approve Applications Modal */}
       {bulkApproveModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-brand-green-soft p-2.5 text-brand-green-dark">
-                  <Award className="h-6 w-6 text-brand-orange" />
+            <div className="flex items-start justify-between border-b border-border pb-3 sm:pb-4 gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="rounded-xl bg-brand-green-soft p-2 sm:p-2.5 text-brand-green-dark shrink-0">
+                  <Award className="h-5 w-5 sm:h-6 sm:w-6 text-brand-orange" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-extrabold text-foreground">
-                    Bulk Approve Scholarship Applications
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-xl font-extrabold text-foreground truncate">
+                    Bulk Approve Applications
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Batch approve candidate dossiers and automatically dispatch high-priority in-platform notifications.
+                  <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-2">
+                    Batch approve candidate dossiers and dispatch in-platform notifications safely.
                   </p>
                 </div>
               </div>
@@ -1971,25 +1972,25 @@ function ApplicantsPage() {
                 size="sm"
                 disabled={bulkApproving}
                 onClick={() => setBulkApproveModalOpen(false)}
-                className="h-8 w-8 p-0 rounded-full"
+                className="h-8 w-8 p-0 rounded-full shrink-0"
               >
                 ✕
               </Button>
             </div>
 
             {/* Modal Body */}
-            <div className="mt-4 space-y-4 overflow-y-auto pr-1">
+            <div className="mt-3 sm:mt-4 space-y-3.5 sm:space-y-4 overflow-y-auto pr-1">
               {/* Category Selector */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
                   1. Target Batch Selection
                 </label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { id: "selected_only", label: "Selected Checkboxes", count: selectedIds.length },
                     { id: "shortlisted", label: "All Shortlisted", count: stats.shortlisted },
-                    { id: "under_review", label: "Under Review / Screening", count: stats.underReview },
-                    { id: "current_filter", label: "Current Table View", count: filtered.length },
+                    { id: "under_review", label: "Under Review", count: stats.underReview },
+                    { id: "current_filter", label: "Current View", count: filtered.length },
                   ].map((cat) => {
                     const isSelected = bulkApproveTargetCategory === cat.id;
                     const isDisabled = cat.id === "selected_only" && selectedIds.length === 0;
@@ -2018,25 +2019,25 @@ function ApplicantsPage() {
               </div>
 
               {/* Target Breakdown Strip */}
-              <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/40 p-3 border border-border text-center">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total In Batch</span>
-                  <p className="text-base font-extrabold text-foreground">{bulkApproveTargetApps.all.length}</p>
+              <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/40 p-2.5 sm:p-3 border border-border text-center">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate block">Total In Batch</span>
+                  <p className="text-sm sm:text-base font-extrabold text-foreground">{bulkApproveTargetApps.all.length}</p>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-dark">Eligible to Approve</span>
-                  <p className="text-base font-extrabold text-brand-green-dark">{bulkApproveTargetApps.eligible.length}</p>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-dark truncate block">Eligible</span>
+                  <p className="text-sm sm:text-base font-extrabold text-brand-green-dark">{bulkApproveTargetApps.eligible.length}</p>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Already Approved</span>
-                  <p className="text-base font-extrabold text-muted-foreground">{bulkApproveTargetApps.alreadyApproved.length}</p>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate block">Approved</span>
+                  <p className="text-sm sm:text-base font-extrabold text-muted-foreground">{bulkApproveTargetApps.alreadyApproved.length}</p>
                 </div>
               </div>
 
               {/* Timeline Message Note */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                  2. Status Timeline Message (Visible on Candidate Dossier)
+                  2. Status Timeline Message (Visible on Dossier)
                 </label>
                 <Input
                   className="h-10 text-xs font-normal"
@@ -2047,10 +2048,10 @@ function ApplicantsPage() {
               </div>
 
               {/* In-Platform Portal Message Notification */}
-              <div className="rounded-xl border border-brand-green/30 bg-brand-green-soft/40 p-3.5 space-y-3">
+              <div className="rounded-xl border border-brand-green/30 bg-brand-green-soft/40 p-3 sm:p-3.5 space-y-2.5 sm:space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-brand-green-dark">
-                    <CheckCircle2 className="h-4 w-4" /> In-Platform Portal Notification (Included)
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold text-brand-green-dark">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" /> Portal Notification
                   </div>
                   <span className="rounded-full bg-brand-green-dark text-white px-2 py-0.5 text-[10px] font-extrabold">
                     HIGH PRIORITY
@@ -2079,7 +2080,7 @@ function ApplicantsPage() {
                     onChange={(e) => setBulkApprovePortalBody(e.target.value)}
                   />
                   <p className="mt-1 text-[10px] text-muted-foreground">
-                    Candidates will receive an unread badge and a prominent notification banner upon logging in to their portal.
+                    Candidates will receive an unread badge and banner upon logging in to their portal.
                   </p>
                 </div>
               </div>
@@ -2113,16 +2114,17 @@ function ApplicantsPage() {
             </div>
 
             {/* Footer actions */}
-            <div className="mt-4 flex items-center justify-end gap-3 pt-3 border-t border-border">
+            <div className="mt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-border">
               <Button
                 variant="outline"
                 disabled={bulkApproving}
                 onClick={() => setBulkApproveModalOpen(false)}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold"
+                className="bg-brand-green-dark text-white hover:bg-brand-green-dark/90 font-bold w-full sm:w-auto"
                 disabled={bulkApproving || bulkApproveTargetApps.eligible.length === 0}
                 onClick={() => void handleBulkApprove()}
               >
