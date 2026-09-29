@@ -449,6 +449,13 @@ function ApplicantProfile() {
                 ["Date of Birth", formatDate(application.personal.dob)],
                 ["State of Origin", application.personal.stateOfOrigin],
                 ["State of Residence", application.personal.stateOfResidence],
+                ["Religion", application.personal.religion || "—"],
+                [
+                  "Aba Study Centre Attendance",
+                  application.personal.physicalAttendanceAcknowledged
+                    ? "Acknowledged & Agreed"
+                    : "Standard",
+                ],
                 ["Residential Address", application.personal.address],
                 ["Contact Phone", application.personal.phone],
               ]}

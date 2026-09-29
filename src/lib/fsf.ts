@@ -80,6 +80,9 @@ export const NIGERIAN_STATES = [
   "Zamfara",
 ] as const;
 
+export const RELIGIONS = ["Christianity", "Islam", "Others"] as const;
+export type Religion = (typeof RELIGIONS)[number];
+
 export type ApplicationStatus =
   | "Draft"
   | "Submitted"
@@ -208,6 +211,8 @@ export type Application = {
     address: string;
     stateOfResidence: string;
     stateOfOrigin: string;
+    religion?: string;
+    physicalAttendanceAcknowledged?: boolean;
     photo?: string;
   };
   education: {

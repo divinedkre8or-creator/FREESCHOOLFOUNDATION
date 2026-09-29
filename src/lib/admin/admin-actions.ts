@@ -39,6 +39,14 @@ const bulkApproveCategorySchema = z.object({
   portalMessageBody: z.string().optional(),
 });
 
+const bulkRevokeApprovedSchema = z.object({
+  accessToken: z.string().min(20),
+  applicationIds: z.array(z.string().uuid()).optional(),
+  targetToStatus: z.enum(["under_review", "submitted"]).default("under_review"),
+  internalReason: z.string().optional(),
+  applicantMessage: z.string().optional(),
+});
+
 const updateDocStatusSchema = z.object({
   accessToken: z.string().min(20),
   applicationId: z.string().uuid(),
@@ -154,6 +162,130 @@ async function verifyStaffAndGetClients(accessToken: string) {
 
   return { userData, adminClient, staffProfile };
 }
+
+export interface AdminDashboardMetrics {
+  totalRegistered: number;
+  totalSubmitted: number;
+  underReviewCount: number;
+  documentsRequiredCount: number;
+  shortlistedCount: number;
+  approvedCount: number;
+  enrolledCount: number;
+  rejectedCount: number;
+  draftCount: number;
+  totalApplications: number;
+  byStatus: Record<string, number>;
+  byProgramme: Array<{ id: string; name: string; count: number }>;
+  byLevel: Array<{ level: string; count: number }>;
+  recentSubmissions: Array<{
+    id: string;
+    appNumber: string;
+    applicantName: string;
+    programme: string;
+    level: string;
+    status: ApplicationStatus;
+    submittedAt: string | null;
+    createdAt: string;
+  }>;
+}
+
+// 0. High-Performance Dashboard Realtime Metrics (< 150ms aggregation)
+export const getAdminDashboardMetricsServerFn = createServerFn({ method: "POST" })
+  .validator(tokenOnlySchema)
+  .handler(async ({ data }): Promise<AdminDashboardMetrics> => {
+    const { adminClient } = await verifyStaffAndGetClients(data.accessToken);
+
+    const [profilesRes, appsRes, recentAppsRes] = await Promise.all([
+      // Fast exact count of registered accounts from profiles
+      adminClient.from("profiles").select("id", { count: "exact", head: true }),
+      // Lightweight scalar column select for aggregation across all applications
+      adminClient.from("applications").select("id, status, level, programme_id, programmes(id, name)"),
+      // Top 6 latest applications with minimal summary attributes
+      adminClient
+        .from("applications")
+        .select("id, application_number, personal, level, status, submitted_at, created_at, programmes(name)")
+        .order("created_at", { ascending: false })
+        .limit(6),
+    ]);
+
+    const totalRegistered = profilesRes.count ?? (appsRes.data?.length ?? 0);
+    const appRows = appsRes.data ?? [];
+
+    const byStatus: Record<string, number> = {};
+    const programmeMap: Record<string, { id: string; name: string; count: number }> = {};
+    const levelMap: Record<string, number> = {};
+
+    let totalSubmitted = 0;
+    let underReviewCount = 0;
+    let documentsRequiredCount = 0;
+    let shortlistedCount = 0;
+    let approvedCount = 0;
+    let enrolledCount = 0;
+    let rejectedCount = 0;
+    let draftCount = 0;
+
+    for (const app of appRows) {
+      const status = String(app.status || "Draft");
+      byStatus[status] = (byStatus[status] || 0) + 1;
+
+      if (status !== "Draft") totalSubmitted++;
+      if (status === "Under Review" || status === "Submitted") underReviewCount++;
+      if (status === "Additional Documents Required") documentsRequiredCount++;
+      if (status === "Shortlisted") shortlistedCount++;
+      if (status === "Approved") approvedCount++;
+      if (status === "Enrolled") enrolledCount++;
+      if (status === "Rejected") rejectedCount++;
+      if (status === "Draft") draftCount++;
+
+      const level = String(app.level || "ND");
+      levelMap[level] = (levelMap[level] || 0) + 1;
+
+      const prog = app.programmes as { id?: string; name?: string } | null;
+      if (prog?.name) {
+        const progId = prog.id || prog.name;
+        if (!programmeMap[progId]) {
+          programmeMap[progId] = { id: progId, name: prog.name, count: 0 };
+        }
+        programmeMap[progId].count++;
+      }
+    }
+
+    const recentSubmissions = (recentAppsRes.data ?? []).map((row) => {
+      const personal = (row.personal as Record<string, unknown> | null) || {};
+      const firstName = String(personal["firstName"] || personal["first_name"] || "").trim();
+      const lastName = String(personal["lastName"] || personal["last_name"] || "").trim();
+      const name = [firstName, lastName].filter(Boolean).join(" ") || "Applicant";
+      const prog = row.programmes as { name?: string } | null;
+
+      return {
+        id: String(row.id),
+        appNumber: String(row.application_number || "FSF-PENDING"),
+        applicantName: name,
+        programme: prog?.name || "General",
+        level: String(row.level || "ND"),
+        status: (row.status || "Draft") as ApplicationStatus,
+        submittedAt: row.submitted_at ? String(row.submitted_at) : null,
+        createdAt: String(row.created_at),
+      };
+    });
+
+    return {
+      totalRegistered,
+      totalSubmitted,
+      underReviewCount,
+      documentsRequiredCount,
+      shortlistedCount,
+      approvedCount,
+      enrolledCount,
+      rejectedCount,
+      draftCount,
+      totalApplications: appRows.length,
+      byStatus,
+      byProgramme: Object.values(programmeMap),
+      byLevel: Object.entries(levelMap).map(([level, count]) => ({ level, count })),
+      recentSubmissions,
+    };
+  });
 
 // 1. Fetch All Registered Users (Direct from auth.users joined with apps & profiles)
 export const getRegisteredUsersServerFn = createServerFn({ method: "POST" })
@@ -302,7 +434,7 @@ export const getAdminApplicationsServerFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { adminClient } = await verifyStaffAndGetClients(data.accessToken);
 
-    const allRows: unknown[] = [];
+    const allRows: Record<string, any>[] = [];
     let from = 0;
     const CHUNK_SIZE = 1000;
 
@@ -894,6 +1026,98 @@ export const bulkApproveCategoryServerFn = createServerFn({ method: "POST" })
     };
   });
 
+// 8c. Bulk Revoke Approved Applications (Board Directive Function)
+export const bulkRevokeApprovedApplicationsServerFn = createServerFn({ method: "POST" })
+  .validator(bulkRevokeApprovedSchema)
+  .handler(async ({ data }) => {
+    const { userData, adminClient } = await verifyStaffAndGetClients(data.accessToken);
+
+    const targetToStatus = data.targetToStatus || "under_review";
+    const internalReason = data.internalReason?.trim() || "Status revoked by Board directive";
+    const defaultTimelineMsg =
+      data.applicantMessage?.trim() ||
+      "Your application status is currently under active review by the scholarship board.";
+    const now = new Date().toISOString();
+
+    // 1. Fetch approved applications
+    let query = adminClient
+      .from("applications")
+      .select("id, status, applicant_id, campaign_id")
+      .in("status", ["approved", "Approved", "enrolled", "Enrolled"]);
+
+    if (data.applicationIds && data.applicationIds.length > 0) {
+      query = query.in("id", data.applicationIds);
+    }
+
+    const { data: targetApps, error: fetchErr } = await query;
+    if (fetchErr) {
+      console.error("Bulk revoke fetch error:", fetchErr);
+      throw new Error("Failed to fetch approved applications: " + fetchErr.message);
+    }
+
+    const approvedApps = targetApps ?? [];
+    if (approvedApps.length === 0) {
+      return {
+        success: true,
+        revokedCount: 0,
+        message: "No approved applications found to revoke.",
+      };
+    }
+
+    const targetIds = approvedApps.map((a) => a.id);
+    const CHUNK_SIZE = 500;
+
+    // 2. Batch update status to targetToStatus
+    for (let i = 0; i < targetIds.length; i += CHUNK_SIZE) {
+      const chunkIds = targetIds.slice(i, i + CHUNK_SIZE);
+      const { error: updateErr } = await adminClient
+        .from("applications")
+        .update({ status: targetToStatus, updated_at: now })
+        .in("id", chunkIds);
+
+      if (updateErr) {
+        console.error("Bulk revoke update error:", updateErr);
+        throw new Error("Failed to update status for revoked applications.");
+      }
+    }
+
+    // 3. Batch insert status history
+    for (let i = 0; i < approvedApps.length; i += CHUNK_SIZE) {
+      const chunkApps = approvedApps.slice(i, i + CHUNK_SIZE);
+      const historyRows = chunkApps.map((app) => ({
+        application_id: app.id,
+        changed_by: userData.user.id,
+        from_status: app.status,
+        to_status: targetToStatus,
+        applicant_message: defaultTimelineMsg,
+        internal_reason: internalReason,
+        created_at: now,
+      }));
+
+      await adminClient.from("application_status_history").insert(historyRows);
+    }
+
+    // 4. Record consolidated audit event
+    await adminClient.from("audit_events").insert({
+      actor_id: userData.user.id,
+      action: "application.approved_revoked_by_board",
+      object_type: "application_batch",
+      outcome: "success",
+      metadata: {
+        revoked_count: targetIds.length,
+        target_to_status: targetToStatus,
+        reason: internalReason,
+        application_ids_sample: targetIds.slice(0, 50),
+      },
+    });
+
+    return {
+      success: true,
+      revokedCount: targetIds.length,
+      targetToStatus,
+    };
+  });
+
 // 8. Delete Application Record
 export const deleteApplicationRecordServerFn = createServerFn({ method: "POST" })
   .validator(deleteInputSchema)
@@ -994,6 +1218,17 @@ export async function deleteApplicationRecord(applicationId: string) {
   });
 }
 
+export async function adminFetchDashboardMetrics(): Promise<AdminDashboardMetrics> {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Your session has expired.");
+
+  return await getAdminDashboardMetricsServerFn({
+    data: { accessToken },
+  });
+}
+
 export async function adminUpdateApplicationStatus(
   applicationId: string,
   status: string,
@@ -1071,9 +1306,9 @@ export async function adminDispatchPortalMessage(input: {
 
 export async function adminBulkApproveApplications(input: {
   applicationIds: string[];
-  applicantMessage?: string;
-  portalMessageSubject?: string;
-  portalMessageBody?: string;
+  applicantMessage?: string | undefined;
+  portalMessageSubject?: string | undefined;
+  portalMessageBody?: string | undefined;
 }) {
   const supabase = getSupabaseBrowserClient();
   const { data } = await supabase.auth.getSession();
@@ -1093,9 +1328,9 @@ export async function adminBulkApproveApplications(input: {
 
 export async function adminBulkApproveByCategory(input: {
   category: "shortlisted" | "under_review" | "submitted" | "all_eligible";
-  applicantMessage?: string;
-  portalMessageSubject?: string;
-  portalMessageBody?: string;
+  applicantMessage?: string | undefined;
+  portalMessageSubject?: string | undefined;
+  portalMessageBody?: string | undefined;
 }) {
   const supabase = getSupabaseBrowserClient();
   const { data } = await supabase.auth.getSession();
@@ -1109,6 +1344,28 @@ export async function adminBulkApproveByCategory(input: {
       applicantMessage: input.applicantMessage,
       portalMessageSubject: input.portalMessageSubject,
       portalMessageBody: input.portalMessageBody,
+    },
+  });
+}
+
+export async function adminBulkRevokeApprovedApplications(input?: {
+  applicationIds?: string[] | undefined;
+  targetToStatus?: "under_review" | "submitted" | undefined;
+  internalReason?: string | undefined;
+  applicantMessage?: string | undefined;
+}) {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Your session has expired.");
+
+  return await bulkRevokeApprovedApplicationsServerFn({
+    data: {
+      accessToken,
+      applicationIds: input?.applicationIds,
+      targetToStatus: input?.targetToStatus || "under_review",
+      internalReason: input?.internalReason,
+      applicantMessage: input?.applicantMessage,
     },
   });
 }

@@ -203,6 +203,13 @@ function ApplicantsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [bulkRevokeModalOpen, setBulkRevokeModalOpen] = useState(false);
+  const [bulkRevoking, setBulkRevoking] = useState(false);
+  const [bulkRevokeReason, setBulkRevokeReason] = useState("Status revoked by Board directive");
+  const [bulkRevokeFeedback, setBulkRevokeFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [showAdminGuide, setShowAdminGuide] = useState(false);
 
   // Pagination states
@@ -512,9 +519,9 @@ function ApplicantsPage() {
       rawPhone: string;
       cleanPhone: string;
       category: string;
-      programme?: string | null;
-      level?: string | null;
-      email?: string;
+      programme?: string | null | undefined;
+      level?: string | null | undefined;
+      email?: string | undefined;
     }
 
     const rawList: PhoneRecord[] = [];

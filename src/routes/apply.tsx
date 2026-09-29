@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   NIGERIAN_STATES,
   PROGRAMMES,
+  RELIGIONS,
   type Application,
   type Level,
   type Programme,
@@ -69,6 +70,7 @@ type FormState = {
   address: string;
   stateOfResidence: string;
   stateOfOrigin: string;
+  religion: string;
   level: Level;
   programme: Programme;
   secondarySchool: string;
@@ -95,6 +97,7 @@ const initialForm: FormState = {
   address: "",
   stateOfResidence: "Abia",
   stateOfOrigin: "Abia",
+  religion: "Christianity",
   level: "ND",
   programme: "Computer Science",
   secondarySchool: "",
@@ -124,6 +127,7 @@ function ApplyPage() {
   const [file, setFile] = useState<File | null>(null);
   const [declaration, setDeclaration] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [attendanceAcknowledged, setAttendanceAcknowledged] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState<Application | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -182,6 +186,7 @@ function ApplyPage() {
             address: p["address"] || current.address,
             stateOfResidence: p["stateOfResidence"] || current.stateOfResidence,
             stateOfOrigin: p["stateOfOrigin"] || current.stateOfOrigin,
+            religion: p["religion"] || current.religion,
           }));
         }
       }
@@ -226,15 +231,18 @@ function ApplyPage() {
         !form.dob ||
         !form.phone ||
         !form.email ||
-        !form.address)
+        !form.address ||
+        !form.stateOfResidence ||
+        !form.stateOfOrigin ||
+        !form.religion)
     )
-      nextErrors.push("Complete all required personal information.");
+      nextErrors.push("Complete all required personal information, including State of Origin and Religion.");
     if (step === 2 && (!form.secondarySchool || !form.examYear))
       nextErrors.push("Add your secondary school and examination year.");
     if (step === 3 && (!form.reason || !form.goals))
       nextErrors.push("Answer both scholarship questions.");
-    if (step === 5 && (!declaration || !consent))
-      nextErrors.push("Accept the declaration and communication consent to submit.");
+    if (step === 5 && (!declaration || !consent || !attendanceAcknowledged))
+      nextErrors.push("You must acknowledge the Aba Study Centre physical attendance notice, accept the declaration, and provide communication consent to submit.");
     setErrors(nextErrors);
     return nextErrors.length === 0;
   };
@@ -290,6 +298,8 @@ function ApplyPage() {
           address: form.address,
           stateOfResidence: form.stateOfResidence,
           stateOfOrigin: form.stateOfOrigin,
+          religion: form.religion,
+          physicalAttendanceAcknowledged: true,
         },
         education,
         scholarshipResponses: {
@@ -330,6 +340,8 @@ function ApplyPage() {
         address: form.address,
         stateOfResidence: form.stateOfResidence,
         stateOfOrigin: form.stateOfOrigin,
+        religion: form.religion,
+        physicalAttendanceAcknowledged: true,
       },
       education,
       scholarship: {
@@ -541,8 +553,10 @@ function ApplyPage() {
                 fileName={fileName}
                 declaration={declaration}
                 consent={consent}
+                attendanceAcknowledged={attendanceAcknowledged}
                 setDeclaration={setDeclaration}
                 setConsent={setConsent}
+                setAttendanceAcknowledged={setAttendanceAcknowledged}
                 edit={setStep}
               />
             )}
@@ -683,17 +697,30 @@ function Personal({
             />
           </Field>
         </div>
-        <Field label="State of residence">
+        <Field label="State of residence" required>
           <StateSelect
             value={form.stateOfResidence}
             onChange={(value) => update("stateOfResidence", value)}
           />
         </Field>
-        <Field label="State of origin">
+        <Field label="State of origin" required>
           <StateSelect
             value={form.stateOfOrigin}
             onChange={(value) => update("stateOfOrigin", value)}
           />
+        </Field>
+        <Field label="Religion" required>
+          <select
+            className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"
+            value={form.religion}
+            onChange={(e) => update("religion", e.target.value)}
+          >
+            {RELIGIONS.map((rel) => (
+              <option key={rel} value={rel}>
+                {rel}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
     </>
@@ -938,16 +965,20 @@ function Review({
   fileName,
   declaration,
   consent,
+  attendanceAcknowledged,
   setDeclaration,
   setConsent,
+  setAttendanceAcknowledged,
   edit,
 }: {
   form: FormState;
   fileName: string;
   declaration: boolean;
   consent: boolean;
+  attendanceAcknowledged: boolean;
   setDeclaration: (value: boolean) => void;
   setConsent: (value: boolean) => void;
+  setAttendanceAcknowledged: (value: boolean) => void;
   edit: (step: number) => void;
 }) {
   const cards = useMemo(
@@ -955,13 +986,19 @@ function Review({
       {
         title: "Personal information",
         step: 0,
-        lines: [`${form.firstName} ${form.lastName}`, form.phone, form.email],
+        lines: [
+          `${form.firstName} ${form.lastName}`,
+          form.phone,
+          form.email,
+          `State of Origin: ${form.stateOfOrigin} · Residence: ${form.stateOfResidence}`,
+          `Religion: ${form.religion}`,
+        ],
       },
       { title: "Programme", step: 1, lines: [`Ordinary National Diploma (OND) · ${form.programme}`] },
       {
         title: "Education",
         step: 2,
-        lines: [form.secondarySchool],
+        lines: [form.secondarySchool, `Exam Year: ${form.examYear} (${form.examType})`],
       },
       { title: "Documents", step: 4, lines: [fileName || "No initial document added"] },
     ],
@@ -973,6 +1010,22 @@ function Review({
       <p className="mt-2 text-sm text-muted-foreground">
         Check your information. Submission does not guarantee scholarship approval or admission.
       </p>
+
+      {/* Prominent Aba Study Centre Physical Attendance Caveat */}
+      <div className="mt-6 rounded-xl border-2 border-brand-orange/40 bg-brand-orange-soft/30 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <Building2 className="h-5 w-5 shrink-0 text-brand-orange mt-0.5" />
+          <div>
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-brand-orange">
+              Mandatory Physical Attendance Notice • Aba Study Centre
+            </h3>
+            <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-foreground">
+              Please note: This scholarship requires <strong>mandatory physical on-ground attendance</strong> at our <strong>Aba Study Centre</strong> (Abia State). All candidates must be physically available on ground to attend lectures, laboratory practicals, and semester examinations.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-7 space-y-3">
         {cards.map((card) => (
           <section key={card.title} className="rounded-xl border border-border p-4">
@@ -995,6 +1048,15 @@ function Review({
         ))}
       </div>
       <div className="mt-6 space-y-4">
+        <label className="flex items-start gap-3 text-sm p-3.5 rounded-lg border border-brand-orange/30 bg-brand-orange-soft/20">
+          <Checkbox
+            checked={attendanceAcknowledged}
+            onCheckedChange={(value) => setAttendanceAcknowledged(value === true)}
+          />
+          <span>
+            <strong className="text-brand-orange">Mandatory On-Ground Attendance Acknowledgment:</strong> I confirm that I will be physically available and present at the <strong>Aba Study Centre</strong> (Abia State) for lectures, practicals, and academic requirements throughout the scholarship program.
+          </span>
+        </label>
         <label className="flex items-start gap-3 text-sm">
           <Checkbox
             checked={declaration}

@@ -343,6 +343,135 @@ export async function loadRegisteredUsers(): Promise<RegisteredUser[]> {
   }));
 }
 
+export interface AdminDashboardMetrics {
+  totalRegistered: number;
+  totalSubmitted: number;
+  underReviewCount: number;
+  documentsRequiredCount: number;
+  shortlistedCount: number;
+  approvedCount: number;
+  enrolledCount: number;
+  rejectedCount: number;
+  draftCount: number;
+  totalApplications: number;
+  byStatus: Record<string, number>;
+  byProgramme: Array<{ id: string; name: string; count: number }>;
+  byLevel: Array<{ level: string; count: number }>;
+  recentSubmissions: Array<{
+    id: string;
+    appNumber: string;
+    applicantName: string;
+    programme: string;
+    level: string;
+    status: ApplicationStatus;
+    submittedAt: string | null;
+    createdAt: string;
+  }>;
+}
+
+export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
+  const supabase = getSupabaseBrowserClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (token) {
+    try {
+      const { getAdminDashboardMetricsServerFn } = await import("@/lib/admin/admin-actions");
+      return await getAdminDashboardMetricsServerFn({ data: { accessToken: token } });
+    } catch (err) {
+      console.warn("getAdminDashboardMetricsServerFn failed, trying client fallback:", err);
+    }
+  }
+
+  // Client-side lightweight fallback aggregation
+  const [profilesRes, appsRes, recentAppsRes] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("applications").select("id, status, level, programme_id, programmes(id, name)"),
+    supabase
+      .from("applications")
+      .select("id, application_number, personal, level, status, submitted_at, created_at, programmes(name)")
+      .order("created_at", { ascending: false })
+      .limit(6),
+  ]);
+
+  const totalRegistered = profilesRes.count ?? (appsRes.data?.length ?? 0);
+  const appRows = (appsRes.data ?? []) as any[];
+
+  const byStatus: Record<string, number> = {};
+  const programmeMap: Record<string, { id: string; name: string; count: number }> = {};
+  const levelMap: Record<string, number> = {};
+
+  let totalSubmitted = 0;
+  let underReviewCount = 0;
+  let documentsRequiredCount = 0;
+  let shortlistedCount = 0;
+  let approvedCount = 0;
+  let enrolledCount = 0;
+  let rejectedCount = 0;
+  let draftCount = 0;
+
+  for (const app of appRows) {
+    const status = String(app.status || "Draft");
+    byStatus[status] = (byStatus[status] || 0) + 1;
+
+    if (status !== "Draft") totalSubmitted++;
+    if (status === "Under Review" || status === "Submitted") underReviewCount++;
+    if (status === "Additional Documents Required") documentsRequiredCount++;
+    if (status === "Shortlisted") shortlistedCount++;
+    if (status === "Approved") approvedCount++;
+    if (status === "Enrolled") enrolledCount++;
+    if (status === "Rejected") rejectedCount++;
+    if (status === "Draft") draftCount++;
+
+    const level = String(app.level || "ND");
+    levelMap[level] = (levelMap[level] || 0) + 1;
+
+    const prog = app.programmes as { id?: string; name?: string } | null;
+    if (prog?.name) {
+      const progId = prog.id || prog.name;
+      if (!programmeMap[progId]) {
+        programmeMap[progId] = { id: progId, name: prog.name, count: 0 };
+      }
+      programmeMap[progId].count++;
+    }
+  }
+
+  const recentSubmissions = ((recentAppsRes.data ?? []) as any[]).map((row) => {
+    const personal = (row.personal as Record<string, unknown> | null) || {};
+    const firstName = String(personal["firstName"] || personal["first_name"] || "").trim();
+    const lastName = String(personal["lastName"] || personal["last_name"] || "").trim();
+    const name = [firstName, lastName].filter(Boolean).join(" ") || "Applicant";
+    const prog = row.programmes as { name?: string } | null;
+
+    return {
+      id: String(row.id),
+      appNumber: String(row.application_number || "FSF-PENDING"),
+      applicantName: name,
+      programme: prog?.name || "General",
+      level: String(row.level || "ND"),
+      status: (row.status || "Draft") as ApplicationStatus,
+      submittedAt: row.submitted_at ? String(row.submitted_at) : null,
+      createdAt: String(row.created_at),
+    };
+  });
+
+  return {
+    totalRegistered,
+    totalSubmitted,
+    underReviewCount,
+    documentsRequiredCount,
+    shortlistedCount,
+    approvedCount,
+    enrolledCount,
+    rejectedCount,
+    draftCount,
+    totalApplications: appRows.length,
+    byStatus,
+    byProgramme: Object.values(programmeMap),
+    byLevel: Object.entries(levelMap).map(([level, count]) => ({ level, count })),
+    recentSubmissions,
+  };
+}
+
 export async function loadAdminApplications(): Promise<Application[]> {
   const supabase = getSupabaseBrowserClient();
   const { data: sessionData } = await supabase.auth.getSession();
