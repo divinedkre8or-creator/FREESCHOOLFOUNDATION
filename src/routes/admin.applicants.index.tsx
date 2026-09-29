@@ -37,7 +37,9 @@ import { PROGRAMMES, STATUSES, formatDate, fullName } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
 import {
   loadAdminApplications,
+  loadAdminDashboardMetrics,
   loadRegisteredUsers,
+  type AdminDashboardMetrics,
   type RegisteredUser,
 } from "@/lib/supabase/applications";
 import { sendRegisteredUsersEmail } from "@/lib/email/platform-email";
@@ -211,6 +213,12 @@ function ApplicantsPage() {
     text: string;
   } | null>(null);
   const [showAdminGuide, setShowAdminGuide] = useState(false);
+  const [bulkRevokeTargetToStatus, setBulkRevokeTargetToStatus] = useState<"under_review" | "submitted">("under_review");
+  const [bulkRevokeApplicantMessage, setBulkRevokeApplicantMessage] = useState(
+    "Your application status is currently under active review by the scholarship board."
+  );
+  const [bulkRevokeProgress, setBulkRevokeProgress] = useState<{ current: number; total: number } | null>(null);
+  const [dashboardMetrics, setDashboardMetrics] = useState<AdminDashboardMetrics | null>(null);
 
   // Pagination states
   const [appPage, setAppPage] = useState(1);
@@ -220,12 +228,14 @@ function ApplicantsPage() {
 
   const fetchUsersAndApps = async () => {
     try {
-      const [refreshedApps, users] = await Promise.all([
+      const [refreshedApps, users, metrics] = await Promise.all([
         loadAdminApplications(),
         loadRegisteredUsers(),
+        loadAdminDashboardMetrics().catch(() => null),
       ]);
       setState((state) => ({ ...state, applications: refreshedApps }));
       setRegisteredUsers(users);
+      if (metrics) setDashboardMetrics(metrics);
     } catch (err) {
       console.error("Refresh failed:", err);
     }
@@ -242,6 +252,25 @@ function ApplicantsPage() {
   };
 
   const stats = useMemo(() => {
+    // Use RPC-derived SQL COUNT(*) as the single source of truth when available
+    // This guarantees dashboard and applicants page always show identical numbers
+    if (dashboardMetrics) {
+      return {
+        total: dashboardMetrics.totalApplications,
+        underReview: dashboardMetrics.underReviewCount,
+        shortlisted: dashboardMetrics.shortlistedCount,
+        approved: dashboardMetrics.approvedCount + dashboardMetrics.enrolledCount,
+        approvedOnlyCount: dashboardMetrics.approvedCount,
+        enrolledCount: dashboardMetrics.enrolledCount,
+        docsNeeded: dashboardMetrics.documentsRequiredCount,
+        registeredCount: dashboardMetrics.totalRegistered,
+        unappliedCount: registeredUsers.filter(
+          (u) => !u.hasApplication || u.applicationStatus === "registered_only",
+        ).length,
+        draftsCount: dashboardMetrics.draftCount,
+      };
+    }
+    // Fallback to local computation if RPC metrics are unavailable
     return {
       total: applications.length,
       underReview: applications.filter(
@@ -250,6 +279,8 @@ function ApplicantsPage() {
       shortlisted: applications.filter((a) => a.status === "Shortlisted").length,
       approved: applications.filter((a) => a.status === "Approved" || a.status === "Enrolled")
         .length,
+      approvedOnlyCount: applications.filter((a) => a.status === "Approved").length,
+      enrolledCount: applications.filter((a) => a.status === "Enrolled").length,
       docsNeeded: applications.filter((a) => a.status === "Additional Documents Required").length,
       registeredCount: registeredUsers.length,
       unappliedCount: registeredUsers.filter(
@@ -257,7 +288,7 @@ function ApplicantsPage() {
       ).length,
       draftsCount: registeredUsers.filter((u) => u.applicationStatus === "draft").length,
     };
-  }, [applications, registeredUsers]);
+  }, [applications, registeredUsers, dashboardMetrics]);
 
   const filtered = useMemo(
     () =>
@@ -864,6 +895,50 @@ function ApplicantsPage() {
     }
   };
 
+  const handleBulkRevoke = async () => {
+    if (stats.approved === 0) return;
+    setBulkRevoking(true);
+    setBulkRevokeFeedback(null);
+    setBulkRevokeProgress(null);
+
+    try {
+      const { adminBulkRevokeApprovedApplications } = await import(
+        "@/lib/admin/admin-actions"
+      );
+
+      setBulkRevokeProgress({ current: 0, total: stats.approved });
+
+      const res = await adminBulkRevokeApprovedApplications({
+        targetToStatus: bulkRevokeTargetToStatus,
+        internalReason: bulkRevokeReason.trim() || "Status revoked by Board directive",
+        applicantMessage: bulkRevokeApplicantMessage.trim() || undefined,
+      });
+
+      setBulkRevokeProgress({ current: res.revokedCount, total: res.revokedCount });
+
+      setBulkRevokeFeedback({
+        type: "success",
+        text: `Successfully revoked ${res.revokedCount} application${res.revokedCount === 1 ? "" : "s"} to "${bulkRevokeTargetToStatus === "under_review" ? "Under Review" : "Submitted"}".`,
+      });
+
+      setSelectedIds([]);
+      await fetchUsersAndApps();
+
+      setTimeout(() => {
+        setBulkRevokeModalOpen(false);
+        setBulkRevokeFeedback(null);
+        setBulkRevokeProgress(null);
+      }, 2500);
+    } catch (err) {
+      setBulkRevokeFeedback({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to revoke application statuses.",
+      });
+    } finally {
+      setBulkRevoking(false);
+    }
+  };
+
   const handleQuickApprove = async (appId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setQuickApprovingId(appId);
@@ -934,6 +1009,20 @@ function ApplicantsPage() {
             >
               <Award className="mr-1.5 h-4 w-4 text-brand-orange" />
               Bulk Approve
+            </Button>
+
+            <Button
+              variant="outline"
+              className="border-red-400/60 text-red-700 hover:bg-red-50 hover:text-red-800 font-bold shadow-xs h-10"
+              onClick={() => {
+                setBulkRevokeFeedback(null);
+                setBulkRevokeProgress(null);
+                setBulkRevokeModalOpen(true);
+              }}
+              disabled={stats.approved === 0}
+            >
+              <RotateCcw className="mr-1.5 h-4 w-4 text-red-500" />
+              Revoke Enrolled
             </Button>
 
             <Button
@@ -2282,6 +2371,193 @@ function ApplicantsPage() {
                 {bulkApproving
                   ? "Approving candidates…"
                   : `Confirm & Approve ${bulkApproveTargetApps.eligible.length} Candidate${bulkApproveTargetApps.eligible.length === 1 ? "" : "s"}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Revoke Enrolled/Approved Applications Modal */}
+      {bulkRevokeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-border pb-3 sm:pb-4 gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="rounded-xl bg-red-50 p-2 sm:p-2.5 text-red-700 shrink-0">
+                  <RotateCcw className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-xl font-extrabold text-foreground truncate">
+                    Revoke Enrolled / Approved
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-2">
+                    Move all enrolled or approved applicants back to review with full audit history.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={bulkRevoking}
+                onClick={() => setBulkRevokeModalOpen(false)}
+                className="h-8 w-8 p-0 rounded-full shrink-0"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mt-3 sm:mt-4 space-y-3.5 sm:space-y-4 overflow-y-auto pr-1">
+              {/* Affected Records Count Preview */}
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-red-50/50 p-3 border border-red-200/60">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 block">Approved</span>
+                  <p className="text-lg font-extrabold text-red-700">{stats.approvedOnlyCount ?? 0}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 block">Enrolled</span>
+                  <p className="text-lg font-extrabold text-red-700">{stats.enrolledCount ?? 0}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-3 text-xs text-amber-900 font-medium">
+                <strong className="font-bold">⚠ Board-Level Action:</strong> This will revert{" "}
+                <strong className="font-extrabold">{stats.approved}</strong> approved/enrolled
+                applicant{stats.approved === 1 ? "" : "s"} to the selected target status. Status
+                history and audit trail entries will be recorded for every affected record.
+              </div>
+
+              {/* Target Status Selection */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  1. Revoke To Status
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={bulkRevoking}
+                    onClick={() => setBulkRevokeTargetToStatus("under_review")}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      bulkRevokeTargetToStatus === "under_review"
+                        ? "border-brand-green bg-brand-green-soft text-brand-green-dark shadow-xs font-bold ring-2 ring-brand-green/30"
+                        : "border-border bg-card hover:bg-secondary/40 text-foreground"
+                    }`}
+                  >
+                    <span className="block text-sm font-bold">Under Review</span>
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">
+                      Return to active screening pipeline
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkRevoking}
+                    onClick={() => setBulkRevokeTargetToStatus("submitted")}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      bulkRevokeTargetToStatus === "submitted"
+                        ? "border-brand-green bg-brand-green-soft text-brand-green-dark shadow-xs font-bold ring-2 ring-brand-green/30"
+                        : "border-border bg-card hover:bg-secondary/40 text-foreground"
+                    }`}
+                  >
+                    <span className="block text-sm font-bold">Submitted</span>
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">
+                      Reset to initial submission state
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Internal Reason (Mandatory) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  2. Internal Reason (Staff-Only, Required)
+                </label>
+                <Textarea
+                  rows={2}
+                  className="text-xs font-normal leading-relaxed"
+                  value={bulkRevokeReason}
+                  onChange={(e) => setBulkRevokeReason(e.target.value)}
+                  placeholder="e.g. Board directive to re-evaluate all approved candidates before final enrolment."
+                  disabled={bulkRevoking}
+                />
+              </div>
+
+              {/* Applicant-Visible Message */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  3. Applicant Timeline Message (Visible to Candidate)
+                </label>
+                <Textarea
+                  rows={2}
+                  className="text-xs font-normal leading-relaxed"
+                  value={bulkRevokeApplicantMessage}
+                  onChange={(e) => setBulkRevokeApplicantMessage(e.target.value)}
+                  placeholder="e.g. Your application is currently under active review by the scholarship board."
+                  disabled={bulkRevoking}
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  This message will appear on each applicant's status timeline in their portal.
+                </p>
+              </div>
+
+              {/* Live Progress Bar */}
+              {bulkRevokeProgress && (
+                <div className="rounded-xl border border-red-300/40 bg-red-50/50 p-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-red-700 mb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Revoking statuses…
+                    </span>
+                    <span>
+                      {bulkRevokeProgress.current} / {bulkRevokeProgress.total}
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-secondary/80 overflow-hidden">
+                    <div
+                      className="h-full bg-red-500 transition-all duration-300 rounded-full"
+                      style={{
+                        width: `${Math.round(
+                          (bulkRevokeProgress.current / Math.max(1, bulkRevokeProgress.total)) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Feedback Alert */}
+              {bulkRevokeFeedback && (
+                <div
+                  className={`rounded-lg p-3 text-xs font-bold ${
+                    bulkRevokeFeedback.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      : "bg-destructive/10 text-destructive border border-destructive/20"
+                  }`}
+                >
+                  {bulkRevokeFeedback.text}
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="mt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-border">
+              <Button
+                variant="outline"
+                disabled={bulkRevoking}
+                onClick={() => setBulkRevokeModalOpen(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 text-white hover:bg-red-700 font-bold w-full sm:w-auto"
+                disabled={bulkRevoking || stats.approved === 0 || !bulkRevokeReason.trim()}
+                onClick={() => void handleBulkRevoke()}
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" />
+                {bulkRevoking
+                  ? "Revoking statuses…"
+                  : `Confirm & Revoke ${stats.approved} Application${stats.approved === 1 ? "" : "s"}`}
               </Button>
             </div>
           </div>
