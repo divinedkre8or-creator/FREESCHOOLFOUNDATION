@@ -9,23 +9,48 @@ const TONES: Record<string, string> = {
   danger: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
+const STATUS_NORMALIZATION: Record<string, ApplicationStatus> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  under_review: "Under Review",
+  "under review": "Under Review",
+  shortlisted: "Shortlisted",
+  additional_documents_required: "Additional Documents Required",
+  "additional documents required": "Additional Documents Required",
+  approved: "Approved",
+  enrolled: "Enrolled",
+  not_successful: "Not Successful",
+  "not successful": "Not Successful",
+  rejected: "Not Successful",
+};
+
 export function StatusBadge({
   status,
   className,
 }: {
-  status: ApplicationStatus;
+  status: ApplicationStatus | string | null | undefined;
   className?: string;
 }) {
-  const tone = STATUS_COPY[status].tone;
+  const normalizedKey = status ? String(status).trim() : "Draft";
+  const normalizedStatus =
+    STATUS_COPY[normalizedKey as ApplicationStatus]
+      ? (normalizedKey as ApplicationStatus)
+      : STATUS_NORMALIZATION[normalizedKey.toLowerCase()] ?? "Draft";
+
+  const config = STATUS_COPY[normalizedStatus];
+  const tone = config?.tone ?? "neutral";
+  const label = config ? normalizedStatus : normalizedKey || "Unknown";
+
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
-        TONES[tone],
+        TONES[tone] || TONES["neutral"],
         className,
       )}
     >
-      {status}
+      {label}
     </span>
   );
 }
+
