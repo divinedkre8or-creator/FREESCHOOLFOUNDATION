@@ -8,9 +8,9 @@ import { absoluteUrl, breadcrumbSchema, seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/programmes")({
   head: () =>
     seoHead({
-      title: "Fully Funded OND Programmes | The Free School Foundation",
+      title: "Fully Funded ND Programmes | The Free School Foundation",
       description:
-        "Explore fully funded Ordinary National Diploma (OND) options in Computer Science, Computer Engineering, Electrical Engineering, Mass Communication and Business Administration.",
+        "Explore fully funded National Diploma (ND) options in Computer Science, Computer Engineering, Electrical Engineering, Mass Communication and Business Administration.",
       path: "/programmes",
       scripts: [
         {
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/programmes")({
             {
               "@context": "https://schema.org",
               "@type": "ItemList",
-              name: "Fully funded OND programmes",
+              name: "Fully funded ND programmes",
               url: absoluteUrl("/programmes"),
               numberOfItems: PROGRAMMES.length,
               itemListElement: PROGRAMMES.map((name, index) => ({
@@ -46,7 +46,7 @@ function ProgrammesPage() {
       <PageHero
         eyebrow="Programmes"
         title="Five programmes, fully funded"
-        description="Every programme below is available at Ordinary National Diploma (OND) level under the current scholarship."
+        description="Every programme below is available at National Diploma (ND) level under the current scholarship."
       />
 
       <section className="section-y">
@@ -55,7 +55,7 @@ function ProgrammesPage() {
             <article key={p} className="rounded-2xl border border-border p-7">
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-brand-green-soft px-2.5 py-1 text-xs font-bold text-brand-green-dark">
-                  OND
+                  ND
                 </span>
               </div>
               <h2 className="mt-4 text-xl font-bold">{p}</h2>

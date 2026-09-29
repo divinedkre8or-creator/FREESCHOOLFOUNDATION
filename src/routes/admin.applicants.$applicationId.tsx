@@ -423,9 +423,9 @@ function ApplicantProfile() {
                 ["Programme Applied", application.programme],
                 [
                   "Target Award Level",
-                  "Ordinary National Diploma (OND)",
+                  "National Diploma (ND)",
                 ],
-                ["Partner Institution", "Citi Polytechnic ODL Partnership"],
+                ["Partner Institution", "Citi Polytechnic ODF-EL program"],
                 ["Scholarship Campaign", application.campaign],
                 ["Application Date", formatDate(application.submittedAt)],
                 [
@@ -769,7 +769,7 @@ function ApplicantProfile() {
                   type="button"
                   onClick={() => {
                     setStatus("Approved");
-                    setStatusMessage("Congratulations! Your scholarship application has been APPROVED for Citi Polytechnic ODL 2026. Next onboarding steps will follow.");
+                    setStatusMessage("Congratulations! Your scholarship application has been APPROVED for Citi Polytechnic ODF-EL 2026. Next onboarding steps will follow.");
                   }}
                   className={`rounded-lg border px-2.5 py-1.5 text-left text-[11px] font-bold transition-all ${
                     status === "Approved"

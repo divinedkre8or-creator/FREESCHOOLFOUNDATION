@@ -26,9 +26,9 @@ import { seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/")({
   head: () =>
     seoHead({
-      title: "100% Free OND Scholarship | The Free School Foundation",
+      title: "100% Free ND Scholarship | The Free School Foundation",
       description:
-        "Apply for a 100% funded Ordinary National Diploma (OND) scholarship in Nigeria. Study through the Open Distance Learning (ODL) Programme with no tuition or application fee.",
+        "Apply for a 100% funded National Diploma (ND) scholarship in Nigeria. Study through the Open Distance and Flexible e-Learning (ODF-EL) Programme with no tuition or application fee.",
       path: "/",
     }),
   component: Home,
@@ -45,11 +45,11 @@ function Home() {
               <BadgeCheck className="h-4 w-4" /> Applications open
             </span>
             <h1 className="mt-5 text-3xl leading-[1.05] font-extrabold min-[380px]:text-4xl md:text-6xl">
-              Get your OND
+              Get your ND
               <span className="mt-1 block text-brand-orange">100% free</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-              Study from Aba through the Open Distance Learning (ODL) Programme, fully funded by The
+              Study from Aba through the Open Distance and Flexible e-Learning (ODF-EL) Programme, fully funded by The
               Free School Foundation. No tuition fees, no application fees.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -74,7 +74,7 @@ function Home() {
             <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-border bg-card/95 p-4 backdrop-blur">
               <p className="text-sm font-bold">No tuition fees</p>
               <p className="text-xs text-muted-foreground">
-                Full scholarship covering your OND programme
+                Full scholarship covering your ND programme
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ function Home() {
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             The Free School Foundation pays your tuition so that money is never the reason you stop
-            learning. Study through a structured Open Distance Learning programme with physical
+            learning. Study through a structured Open Distance and Flexible e-Learning programme with physical
             orientation and Foundation guidance in Aba.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -97,7 +97,7 @@ function Home() {
               {
                 icon: Wallet,
                 title: "100% full scholarship",
-                body: "Your tuition for the full OND programme is covered by the Foundation.",
+                body: "Your tuition for the full ND programme is covered by the Foundation.",
               },
               {
                 icon: ClipboardList,
@@ -107,12 +107,12 @@ function Home() {
               {
                 icon: MapPin,
                 title: "Study from Aba",
-                body: "Attend through Open Distance Learning (ODL) with physical orientation and dedicated local support in Aba.",
+                body: "Attend through Open Distance and Flexible e-Learning (ODF-EL) with physical orientation and dedicated local support in Aba.",
               },
               {
                 icon: ShieldCheck,
                 title: "Recognised diploma",
-                body: "Accredited Ordinary National Diploma (OND) awards through approved programmes.",
+                body: "Accredited National Diploma (ND) awards through approved programmes.",
               },
             ].map((item) => (
               <div key={item.title} className="rounded-2xl border border-border p-5 sm:p-6">
@@ -132,7 +132,7 @@ function Home() {
             <div>
               <h2 className="text-2xl font-extrabold md:text-4xl">Available programmes</h2>
               <p className="mt-3 max-w-xl text-muted-foreground">
-                Five programmes, available at Ordinary National Diploma (OND) level.
+                Five programmes, available at National Diploma (ND) level.
               </p>
             </div>
             <Button asChild variant="outline">
@@ -151,7 +151,7 @@ function Home() {
                   {PROGRAMME_DETAILS[p].blurb}
                 </p>
                 <p className="mt-4 text-xs font-semibold text-brand-green-dark">
-                  OND available
+                  ND available
                 </p>
               </Link>
             ))}
@@ -180,7 +180,7 @@ function Home() {
         <div className="container-page max-w-3xl">
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
             <h2 className="text-xl font-extrabold md:text-2xl">
-              Ordinary National Diploma (OND) Eligibility
+              National Diploma (ND) Eligibility
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               For applicants with O'Level results who are starting their polytechnic education.
@@ -218,8 +218,8 @@ function Home() {
             </p>
             <p className="mt-4 leading-relaxed text-muted-foreground">
               We work directly with recognised institutions so that every place we fund leads to a
-              real, accredited qualification. Our Open Distance Learning (ODL) scholarship covers
-              100% of tuition for eligible OND candidates.
+              real, accredited qualification. Our Open Distance and Flexible e-Learning (ODF-EL) scholarship covers
+              100% of tuition for eligible ND candidates.
             </p>
             <Button asChild variant="outline" className="mt-6">
               <Link to="/about">Read more about us</Link>
@@ -232,18 +232,18 @@ function Home() {
               </div>
               <div>
                 <h3 className="text-lg font-bold">Academic Model</h3>
-                <p className="text-xs text-muted-foreground">Open Distance Learning (ODL)</p>
+                <p className="text-xs text-muted-foreground">Open Distance & Flexible e-Learning (ODF-EL)</p>
               </div>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
               The Foundation funds the entire scholarship tuition. Academic delivery is conducted
-              through structured Open Distance Learning with physical orientation and local academic
+              through structured Open Distance and Flexible e-Learning with physical orientation and local academic
               support in Aba.
             </p>
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
               {[
                 ["Funder", "The Free School Foundation"],
-                ["Study mode", "Open Distance Learning (ODL)"],
+                ["Study mode", "Open Distance and Flexible e-Learning (ODF-EL)"],
                 ["Study location", "Aba, Abia State"],
                 ["Tuition coverage", "100% Fully Funded"],
               ].map(([k, v]) => (
@@ -316,7 +316,7 @@ function Home() {
             Your diploma is fully funded. The only step left is yours.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Applications for the 2026 Open Distance Learning (ODL) scholarship are open now. It
+            Applications for the 2026 Open Distance and Flexible e-Learning (ODF-EL) scholarship are open now. It
             takes about 15 minutes.
           </p>
           <Button asChild size="lg" variant="secondary" className="mt-8 h-12 text-base">

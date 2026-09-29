@@ -140,7 +140,7 @@ function Footer() {
             <p>© {new Date().getFullYear()} The Free School Foundation. All rights reserved.</p>
             <p className="mt-1 text-[11px] text-muted-foreground/80">
               Academic Partner for National Diploma & Higher National Diploma awards: Citi
-              Polytechnic Abuja (ODL).
+              Polytechnic Abuja (ODF-EL).
             </p>
           </div>
           <div className="flex flex-wrap gap-4">

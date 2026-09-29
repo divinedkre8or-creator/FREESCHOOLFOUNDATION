@@ -136,7 +136,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </button>
           <div className="hidden lg:block">
             <p className="text-sm font-bold">Scholarship dashboard</p>
-            <p className="text-xs text-muted-foreground">Open Distance Learning (ODL) 2026</p>
+            <p className="text-xs text-muted-foreground">Open Distance & Flexible e-Learning (ODF-EL) 2026</p>
           </div>
 
           {/* Functional Notifications Center */}

@@ -737,13 +737,13 @@ function Programme({
     <>
       <h1 className="text-2xl font-extrabold md:text-3xl">Choose your programme</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Select the Ordinary National Diploma (OND) programme you wish to apply for.
+        Select the National Diploma (ND) programme you wish to apply for.
       </p>
       <div className="mt-7">
         <Field label="Award / Level">
           <Input
             className={fieldClass}
-            value="Ordinary National Diploma (OND)"
+            value="National Diploma (ND)"
             disabled
             readOnly
           />
@@ -994,7 +994,7 @@ function Review({
           `Religion: ${form.religion}`,
         ],
       },
-      { title: "Programme", step: 1, lines: [`Ordinary National Diploma (OND) · ${form.programme}`] },
+      { title: "Programme", step: 1, lines: [`National Diploma (ND) · ${form.programme}`] },
       {
         title: "Education",
         step: 2,
@@ -1539,12 +1539,12 @@ function SubmissionSuccessView({
               <div className="flex items-center justify-between p-3.5 sm:px-4">
                 <span className="font-medium text-muted-foreground">Award / Level</span>
                 <span className="font-bold text-foreground">
-                  Ordinary National Diploma (OND)
+                  National Diploma (ND)
                 </span>
               </div>
               <div className="flex items-center justify-between p-3.5 sm:px-4">
                 <span className="font-medium text-muted-foreground">Education Partner</span>
-                <span className="font-bold text-foreground">Citi Polytechnic ODL Partnership</span>
+                <span className="font-bold text-foreground">Citi Polytechnic ODF-EL program</span>
               </div>
             </div>
 

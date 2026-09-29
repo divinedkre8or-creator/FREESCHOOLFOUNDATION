@@ -539,7 +539,7 @@ export const DEMO_ANNOUNCEMENTS: Announcement[] = INCLUDE_DEMO_DATA
       {
         id: "a1",
         title: "Application deadline extended",
-        body: "The deadline for the 2026 ODL scholarship has been extended to 30 November 2026. Encourage others to apply.",
+        body: "The deadline for the 2026 ODF-EL scholarship has been extended to 30 November 2026. Encourage others to apply.",
         audience: "All applicants",
         createdAt: iso(3),
       },
@@ -560,7 +560,7 @@ export const DEMO_CAMPAIGNS: Campaign[] = INCLUDE_DEMO_DATA
         name: "Citi Polytechnic ODL Scholarship 2026",
         partner: "Citi Polytechnic Abuja",
         description:
-          "100% funded OND places through the Open Distance Learning (ODL) Programme, studied from Aba.",
+          "100% funded ND places through the Open Distance and Flexible e-Learning (ODF-EL) Programme, studied from Aba.",
         programmes: [...PROGRAMMES],
         opensOn: "2026-08-01",
         deadline: "2026-11-30",

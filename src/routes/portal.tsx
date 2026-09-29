@@ -289,7 +289,7 @@ function PortalPage() {
                     Welcome, {application.personal.firstName}
                   </h1>
                   <p className="mt-1 text-xs text-emerald-100 sm:text-sm">
-                    {application.programme} • Ordinary National Diploma (OND)
+                    {application.programme} • National Diploma (ND)
                   </p>
                 </div>
 
@@ -523,9 +523,9 @@ function PortalPage() {
                 <Info label="Chosen Programme" value={application.programme} />
                 <Info
                   label="Target Award Level"
-                  value="Ordinary National Diploma (OND)"
+                  value="National Diploma (ND)"
                 />
-                <Info label="Education Partner" value="Citi Polytechnic ODL Partnership" />
+                <Info label="Education Partner" value="Citi Polytechnic ODF-EL program" />
                 <Info label="Scholarship Campaign" value={application.campaign} />
               </div>
             </div>

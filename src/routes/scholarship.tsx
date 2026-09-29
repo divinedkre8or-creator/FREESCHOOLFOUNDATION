@@ -10,9 +10,9 @@ import { breadcrumbSchema, seoHead } from "@/lib/seo";
 export const Route = createFileRoute("/scholarship")({
   head: () =>
     seoHead({
-      title: "100% Funded OND Scholarship | The Free School Foundation",
+      title: "100% Funded ND Scholarship | The Free School Foundation",
       description:
-        "Learn what the Open Distance Learning (ODL) scholarship covers, who can apply, the required documents, available OND programmes, and how to apply online.",
+        "Learn what the Open Distance and Flexible e-Learning (ODF-EL) scholarship covers, who can apply, the required documents, available ND programmes, and how to apply online.",
       path: "/scholarship",
       scripts: [
         {
@@ -34,8 +34,8 @@ function ScholarshipPage() {
     <SiteLayout>
       <PageHero
         eyebrow="Current scholarship"
-        title="Open Distance Learning (ODL) Scholarship"
-        description="A 100% full scholarship covering tuition for Ordinary National Diploma (OND) programmes, funded by The Free School Foundation with accredited partner Citi Polytechnic Abuja."
+        title="Open Distance & Flexible e-Learning (ODF-EL) Scholarship"
+        description="A 100% full scholarship covering tuition for National Diploma (ND) programmes, funded by The Free School Foundation with accredited partner Citi Polytechnic Abuja."
       />
 
       <section className="section-y">
@@ -44,9 +44,9 @@ function ScholarshipPage() {
             <h2 className="text-2xl font-extrabold">What the scholarship covers</h2>
             <ul className="mt-5 space-y-3">
               {[
-                "100% of tuition for the full OND programme",
+                "100% of tuition for the full ND programme",
                 "No application fee at any stage",
-                "Access to Open Distance Learning (ODL) study materials and faculty support",
+                "Access to Open Distance and Flexible e-Learning (ODF-EL) study materials and faculty support",
                 "Structured physical orientation and support from the Foundation office in Aba",
               ].map((item) => (
                 <li key={item} className="flex gap-3 text-muted-foreground">
@@ -76,7 +76,7 @@ function ScholarshipPage() {
             <h2 className="mt-12 text-2xl font-extrabold">Who can apply</h2>
             <div className="mt-5">
               <div className="rounded-2xl border border-border p-6">
-                <h3 className="font-bold">Ordinary National Diploma (OND) applicants</h3>
+                <h3 className="font-bold">National Diploma (ND) applicants</h3>
                 <ul className="mt-3 space-y-2.5">
                   {ELIGIBILITY.ND.map((item) => (
                     <li key={item} className="flex gap-2 text-sm text-muted-foreground">
@@ -121,7 +121,7 @@ function ScholarshipPage() {
               <dl className="mt-6 space-y-3 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Level</dt>
-                  <dd className="font-semibold">Ordinary National Diploma (OND)</dd>
+                  <dd className="font-semibold">National Diploma (ND)</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Programmes</dt>
@@ -129,7 +129,7 @@ function ScholarshipPage() {
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Study mode</dt>
-                  <dd className="font-semibold">Open Distance Learning (ODL)</dd>
+                  <dd className="font-semibold">Open Distance and Flexible e-Learning (ODF-EL)</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Application deadline</dt>
