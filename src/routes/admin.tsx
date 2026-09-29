@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { loadAdminApplications } from "@/lib/supabase/applications";
-import { useStore } from "@/lib/store";
 import { seoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/admin")({
@@ -17,74 +15,62 @@ export const Route = createFileRoute("/admin")({
     }),
   component: AdminRoute,
 });
+
 function AdminRoute() {
   const [access, setAccess] = useState<"loading" | "allowed" | "denied">("loading");
-  const { setState } = useStore();
 
   useEffect(() => {
     let active = true;
-    const fetchApplications = async () => {
-      try {
-        const applications = await loadAdminApplications();
-        if (active) {
-          setState((state) => ({ ...state, applications, currentApplicantId: null }));
-        }
-      } catch (err) {
-        console.error("Failed to load admin applications:", err);
-      }
-    };
 
     const verify = async () => {
-      const supabase = getSupabaseBrowserClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      if (!user) {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData.session?.user;
+        if (!user) {
+          if (active) setAccess("denied");
+          return;
+        }
+        const isSuperAdminEmail =
+          user.email === "officialnwachukwudivine@gmail.com" ||
+          user.email?.endsWith("@thefreeschoolfoundation.com.ng");
+
+        const { data, error } = await supabase
+          .from("staff_profiles")
+          .select("active")
+          .eq("user_id", user.id)
+          .eq("active", true)
+          .maybeSingle();
+
+        if (active) {
+          if ((!error && data?.active) || isSuperAdminEmail) {
+            setAccess("allowed");
+          } else {
+            setAccess("denied");
+          }
+        }
+      } catch (err) {
+        console.error("Admin verification error:", err);
         if (active) setAccess("denied");
-        return;
-      }
-      const isSuperAdminEmail =
-        user.email === "officialnwachukwudivine@gmail.com" ||
-        user.email?.endsWith("@thefreeschoolfoundation.com.ng");
-
-      const { data, error } = await supabase
-        .from("staff_profiles")
-        .select("active")
-        .eq("user_id", user.id)
-        .eq("active", true)
-        .maybeSingle();
-
-      if ((!error && data?.active) || isSuperAdminEmail) {
-        if (active) setAccess("allowed");
-        await fetchApplications();
-      } else if (active) {
-        setAccess("denied");
       }
     };
 
     void verify();
 
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void fetchApplications();
-      }
-    }, 15000);
-
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        void fetchApplications();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-
     return () => {
       active = false;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [setState]);
+  }, []);
 
   if (access === "loading")
-    return <div className="grid min-h-screen place-items-center">Checking staff access…</div>;
+    return (
+      <div className="grid min-h-screen place-items-center">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-brand-green border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Checking admin access…</p>
+        </div>
+      </div>
+    );
 
   if (access === "denied")
     return (
@@ -94,9 +80,14 @@ function AdminRoute() {
           <p className="mt-3 text-sm text-muted-foreground">
             This area is restricted to authorized Foundation staff.
           </p>
-          <Button asChild className="mt-6">
-            <Link to="/">Return to website</Link>
-          </Button>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Button asChild variant="default">
+              <Link to="/admin-access">Sign in as Administrator</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/">Return to website</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -107,3 +98,4 @@ function AdminRoute() {
     </AdminLayout>
   );
 }
+

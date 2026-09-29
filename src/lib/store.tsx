@@ -64,7 +64,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setStateRaw({ ...initialState, ...JSON.parse(raw) });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setStateRaw((prev) => ({
+          ...prev,
+          announcements: Array.isArray(parsed.announcements) ? parsed.announcements : prev.announcements,
+          campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : prev.campaigns,
+          currentApplicantId: parsed.currentApplicantId ?? prev.currentApplicantId,
+          draft: parsed.draft ?? prev.draft,
+        }));
+      }
     } catch {
       /* ignore corrupt storage */
     }
@@ -74,11 +83,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const persistedState = {
+        announcements: state.announcements,
+        campaigns: state.campaigns,
+        currentApplicantId: state.currentApplicantId,
+        draft: state.draft,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
     } catch {
       /* storage full or unavailable */
     }
-  }, [state, ready]);
+  }, [state.announcements, state.campaigns, state.currentApplicantId, state.draft, ready]);
 
   const setState = useCallback(
     (updater: (s: State) => State) => setStateRaw((s) => updater(s)),

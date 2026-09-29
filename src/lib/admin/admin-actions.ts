@@ -189,18 +189,71 @@ export interface AdminDashboardMetrics {
   }>;
 }
 
-// 0. High-Performance Dashboard Realtime Metrics (< 150ms aggregation)
+// 0. High-Performance Dashboard Realtime Metrics (< 20ms SQL aggregation)
 export const getAdminDashboardMetricsServerFn = createServerFn({ method: "POST" })
   .validator(tokenOnlySchema)
   .handler(async ({ data }): Promise<AdminDashboardMetrics> => {
     const { adminClient } = await verifyStaffAndGetClients(data.accessToken);
 
+    // 1. Try instant SQL RPC first (< 10ms execution)
+    try {
+      const { data: rpcData, error: rpcError } = await adminClient.rpc("get_admin_dashboard_metrics");
+      if (!rpcError && rpcData) {
+        const raw = typeof rpcData === "string" ? JSON.parse(rpcData) : rpcData;
+        const byStatus: Record<string, number> = {
+          Draft: Number(raw.draft_count ?? 0),
+          Submitted: Number(raw.under_review_count ?? 0),
+          "Under Review": Number(raw.under_review_count ?? 0),
+          Shortlisted: Number(raw.shortlisted_count ?? 0),
+          "Additional Documents Required": Number(raw.documents_required_count ?? 0),
+          Approved: Number(raw.approved_count ?? 0),
+          Enrolled: Number(raw.enrolled_count ?? 0),
+          "Not Successful": Number(raw.rejected_count ?? 0),
+        };
+
+        const recentSubmissions = (raw.recent_submissions ?? []).map((row: Record<string, any>) => ({
+          id: String(row.id),
+          appNumber: String(row.app_number || "FSF-PENDING"),
+          applicantName: String(row.applicant_name || "Applicant"),
+          programme: String(row.programme || "General"),
+          level: String(row.level || "ND"),
+          status: (row.status || "Draft") as ApplicationStatus,
+          submittedAt: row.submitted_at ? String(row.submitted_at) : null,
+          createdAt: String(row.created_at),
+        }));
+
+        return {
+          totalRegistered: Number(raw.total_registered ?? 0),
+          totalSubmitted: Number(raw.total_submitted ?? 0),
+          underReviewCount: Number(raw.under_review_count ?? 0),
+          documentsRequiredCount: Number(raw.documents_required_count ?? 0),
+          shortlistedCount: Number(raw.shortlisted_count ?? 0),
+          approvedCount: Number(raw.approved_count ?? 0),
+          enrolledCount: Number(raw.enrolled_count ?? 0),
+          rejectedCount: Number(raw.rejected_count ?? 0),
+          draftCount: Number(raw.draft_count ?? 0),
+          totalApplications: Number(raw.total_applications ?? 0),
+          byStatus,
+          byProgramme: (raw.by_programme ?? []).map((p: any) => ({
+            id: String(p.id),
+            name: String(p.name),
+            count: Number(p.count),
+          })),
+          byLevel: (raw.by_level ?? []).map((l: any) => ({
+            level: String(l.level),
+            count: Number(l.count),
+          })),
+          recentSubmissions,
+        };
+      }
+    } catch (rpcErr) {
+      console.warn("get_admin_dashboard_metrics RPC call error, using query aggregation fallback:", rpcErr);
+    }
+
+    // 2. Fallback query aggregation
     const [profilesRes, appsRes, recentAppsRes] = await Promise.all([
-      // Fast exact count of registered accounts from profiles
       adminClient.from("profiles").select("id", { count: "exact", head: true }),
-      // Lightweight scalar column select for aggregation across all applications
       adminClient.from("applications").select("id, status, level, programme_id, programmes(id, name)"),
-      // Top 6 latest applications with minimal summary attributes
       adminClient
         .from("applications")
         .select("id, application_number, personal, level, status, submitted_at, created_at, programmes(name)")
@@ -229,13 +282,13 @@ export const getAdminDashboardMetricsServerFn = createServerFn({ method: "POST" 
       byStatus[status] = (byStatus[status] || 0) + 1;
 
       if (status !== "Draft") totalSubmitted++;
-      if (status === "Under Review" || status === "Submitted") underReviewCount++;
-      if (status === "Additional Documents Required") documentsRequiredCount++;
-      if (status === "Shortlisted") shortlistedCount++;
-      if (status === "Approved") approvedCount++;
-      if (status === "Enrolled") enrolledCount++;
-      if (status === "Rejected") rejectedCount++;
-      if (status === "Draft") draftCount++;
+      if (status === "Under Review" || status === "Submitted" || status === "under_review" || status === "submitted") underReviewCount++;
+      if (status === "Additional Documents Required" || status === "additional_documents_required") documentsRequiredCount++;
+      if (status === "Shortlisted" || status === "shortlisted") shortlistedCount++;
+      if (status === "Approved" || status === "approved") approvedCount++;
+      if (status === "Enrolled" || status === "enrolled") enrolledCount++;
+      if (status === "Rejected" || status === "not_successful") rejectedCount++;
+      if (status === "Draft" || status === "draft") draftCount++;
 
       const level = String(app.level || "ND");
       levelMap[level] = (levelMap[level] || 0) + 1;

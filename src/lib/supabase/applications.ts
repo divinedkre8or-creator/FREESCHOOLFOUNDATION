@@ -298,12 +298,24 @@ export async function loadRegisteredUsers(): Promise<RegisteredUser[]> {
   const { data, error } = await supabase.rpc("list_registered_users");
   if (error) {
     console.warn("list_registered_users RPC not found or returned error, falling back:", error);
-    const { data: apps } = await supabase
-      .from("applications")
-      .select("id, applicant_id, status, application_number, level, personal, created_at, programmes(name)")
-      .order("created_at", { ascending: false });
+    const allApps: Record<string, unknown>[] = [];
+    let from = 0;
+    const CHUNK_SIZE = 1000;
 
-    return (apps ?? []).map((app: Record<string, unknown>) => {
+    while (true) {
+      const { data: appsChunk, error: appsErr } = await supabase
+        .from("applications")
+        .select("id, applicant_id, status, application_number, level, personal, created_at, programmes(name)")
+        .order("created_at", { ascending: false })
+        .range(from, from + CHUNK_SIZE - 1);
+
+      if (appsErr || !appsChunk || appsChunk.length === 0) break;
+      allApps.push(...appsChunk);
+      if (appsChunk.length < CHUNK_SIZE) break;
+      from += CHUNK_SIZE;
+    }
+
+    return allApps.map((app: Record<string, unknown>) => {
       const p = (app["personal"] || {}) as Record<string, string>;
       const prog = app["programmes"] as { name?: string } | null;
       return {
@@ -378,8 +390,63 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
       const { getAdminDashboardMetricsServerFn } = await import("@/lib/admin/admin-actions");
       return await getAdminDashboardMetricsServerFn({ data: { accessToken: token } });
     } catch (err) {
-      console.warn("getAdminDashboardMetricsServerFn failed, trying client fallback:", err);
+      console.warn("getAdminDashboardMetricsServerFn failed, trying RPC/client fallback:", err);
     }
+  }
+
+  // Direct RPC fallback on client
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc("get_admin_dashboard_metrics");
+    if (!rpcError && rpcData) {
+      const raw = typeof rpcData === "string" ? JSON.parse(rpcData) : rpcData;
+      const byStatus: Record<string, number> = {
+        Draft: Number(raw.draft_count ?? 0),
+        Submitted: Number(raw.under_review_count ?? 0),
+        "Under Review": Number(raw.under_review_count ?? 0),
+        Shortlisted: Number(raw.shortlisted_count ?? 0),
+        "Additional Documents Required": Number(raw.documents_required_count ?? 0),
+        Approved: Number(raw.approved_count ?? 0),
+        Enrolled: Number(raw.enrolled_count ?? 0),
+        "Not Successful": Number(raw.rejected_count ?? 0),
+      };
+
+      const recentSubmissions = (raw.recent_submissions ?? []).map((row: Record<string, any>) => ({
+        id: String(row.id),
+        appNumber: String(row.app_number || "FSF-PENDING"),
+        applicantName: String(row.applicant_name || "Applicant"),
+        programme: String(row.programme || "General"),
+        level: String(row.level || "ND"),
+        status: (row.status || "Draft") as ApplicationStatus,
+        submittedAt: row.submitted_at ? String(row.submitted_at) : null,
+        createdAt: String(row.created_at),
+      }));
+
+      return {
+        totalRegistered: Number(raw.total_registered ?? 0),
+        totalSubmitted: Number(raw.total_submitted ?? 0),
+        underReviewCount: Number(raw.under_review_count ?? 0),
+        documentsRequiredCount: Number(raw.documents_required_count ?? 0),
+        shortlistedCount: Number(raw.shortlisted_count ?? 0),
+        approvedCount: Number(raw.approved_count ?? 0),
+        enrolledCount: Number(raw.enrolled_count ?? 0),
+        rejectedCount: Number(raw.rejected_count ?? 0),
+        draftCount: Number(raw.draft_count ?? 0),
+        totalApplications: Number(raw.total_applications ?? 0),
+        byStatus,
+        byProgramme: (raw.by_programme ?? []).map((p: any) => ({
+          id: String(p.id),
+          name: String(p.name),
+          count: Number(p.count),
+        })),
+        byLevel: (raw.by_level ?? []).map((l: any) => ({
+          level: String(l.level),
+          count: Number(l.count),
+        })),
+        recentSubmissions,
+      };
+    }
+  } catch (rpcErr) {
+    console.warn("Client RPC metrics error, trying table queries:", rpcErr);
   }
 
   // Client-side lightweight fallback aggregation
@@ -413,14 +480,14 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
     const status = String(app.status || "Draft");
     byStatus[status] = (byStatus[status] || 0) + 1;
 
-    if (status !== "Draft") totalSubmitted++;
-    if (status === "Under Review" || status === "Submitted") underReviewCount++;
-    if (status === "Additional Documents Required") documentsRequiredCount++;
-    if (status === "Shortlisted") shortlistedCount++;
-    if (status === "Approved") approvedCount++;
-    if (status === "Enrolled") enrolledCount++;
-    if (status === "Rejected") rejectedCount++;
-    if (status === "Draft") draftCount++;
+    if (status !== "Draft" && status !== "draft") totalSubmitted++;
+    if (status === "Under Review" || status === "Submitted" || status === "under_review" || status === "submitted") underReviewCount++;
+    if (status === "Additional Documents Required" || status === "additional_documents_required") documentsRequiredCount++;
+    if (status === "Shortlisted" || status === "shortlisted") shortlistedCount++;
+    if (status === "Approved" || status === "approved") approvedCount++;
+    if (status === "Enrolled" || status === "enrolled") enrolledCount++;
+    if (status === "Rejected" || status === "not_successful") rejectedCount++;
+    if (status === "Draft" || status === "draft") draftCount++;
 
     const level = String(app.level || "ND");
     levelMap[level] = (levelMap[level] || 0) + 1;
@@ -488,12 +555,30 @@ export async function loadAdminApplications(): Promise<Application[]> {
     }
   }
 
-  const { data, error } = await supabase
-    .from("applications")
-    .select(APPLICATION_SELECT)
-    .order("created_at", { ascending: false });
-  if (error) throw new Error("Applications could not be loaded.");
-  return ((data ?? []) as unknown as ApplicationRow[]).map(mapApplication);
+  // Client chunked fetch fallback to bypass 1000 row ceiling
+  const allRows: ApplicationRow[] = [];
+  let from = 0;
+  const CHUNK_SIZE = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("applications")
+      .select(APPLICATION_SELECT)
+      .order("created_at", { ascending: false })
+      .range(from, from + CHUNK_SIZE - 1);
+
+    if (error) {
+      if (allRows.length > 0) break; // Return what we managed to fetch
+      throw new Error("Applications could not be loaded.");
+    }
+
+    if (!data || data.length === 0) break;
+    allRows.push(...(data as unknown as ApplicationRow[]));
+    if (data.length < CHUNK_SIZE) break;
+    from += CHUNK_SIZE;
+  }
+
+  return allRows.map(mapApplication);
 }
 
 export async function markMessageRead(messageId: string): Promise<void> {

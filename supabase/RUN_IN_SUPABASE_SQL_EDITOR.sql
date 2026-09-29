@@ -207,7 +207,106 @@ BEGIN
 END;
 $$;
 
--- 6. Permissions & Grants
+-- 6. High-Performance Dashboard Metrics Aggregation RPC
+CREATE OR REPLACE FUNCTION public.get_admin_dashboard_metrics()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  metrics_result json;
+  recent_rows json;
+  prog_rows json;
+  level_rows json;
+BEGIN
+  IF NOT (
+    EXISTS (
+      SELECT 1 FROM public.staff_profiles sp
+      WHERE sp.user_id = auth.uid() AND sp.active
+    )
+    OR EXISTS (
+      SELECT 1 FROM auth.users u
+      WHERE u.id = auth.uid()
+        AND (u.email = 'officialnwachukwudivine@gmail.com' OR u.email LIKE '%@thefreeschoolfoundation.com.ng')
+    )
+  ) THEN
+    RAISE EXCEPTION 'staff_permission_required' USING errcode = '42501';
+  END IF;
+
+  SELECT COALESCE(json_agg(r), '[]'::json) INTO recent_rows
+  FROM (
+    SELECT 
+      a.id,
+      COALESCE(a.application_number, 'FSF-PENDING') AS app_number,
+      TRIM(CONCAT(
+        COALESCE(a.personal->>'firstName', a.personal->>'first_name', ''),
+        ' ',
+        COALESCE(a.personal->>'lastName', a.personal->>'last_name', '')
+      )) AS applicant_name,
+      COALESCE(p.name, 'General') AS programme,
+      COALESCE(a.level::text, 'ND') AS level,
+      a.status::text AS status,
+      a.submitted_at,
+      a.created_at
+    FROM public.applications a
+    LEFT JOIN public.programmes p ON p.id = a.programme_id
+    ORDER BY a.created_at DESC
+    LIMIT 6
+  ) r;
+
+  SELECT COALESCE(json_agg(p_count), '[]'::json) INTO prog_rows
+  FROM (
+    SELECT 
+      COALESCE(p.id::text, 'unknown') AS id,
+      COALESCE(p.name, 'General') AS name,
+      COUNT(a.id)::int AS count
+    FROM public.applications a
+    LEFT JOIN public.programmes p ON p.id = a.programme_id
+    WHERE a.status != 'draft'
+    GROUP BY p.id, p.name
+  ) p_count;
+
+  SELECT COALESCE(json_agg(l_count), '[]'::json) INTO level_rows
+  FROM (
+    SELECT 
+      COALESCE(a.level::text, 'ND') AS level,
+      COUNT(a.id)::int AS count
+    FROM public.applications a
+    WHERE a.status != 'draft'
+    GROUP BY a.level
+  ) l_count;
+
+  SELECT json_build_object(
+    'total_registered', (SELECT COUNT(*)::int FROM auth.users),
+    'total_applications', (SELECT COUNT(*)::int FROM public.applications),
+    'total_submitted', (SELECT COUNT(*)::int FROM public.applications WHERE status != 'draft'),
+    'draft_count', (SELECT COUNT(*)::int FROM public.applications WHERE status = 'draft'),
+    'under_review_count', (SELECT COUNT(*)::int FROM public.applications WHERE status IN ('under_review', 'submitted')),
+    'documents_required_count', (SELECT COUNT(*)::int FROM public.applications WHERE status = 'additional_documents_required'),
+    'shortlisted_count', (SELECT COUNT(*)::int FROM public.applications WHERE status = 'shortlisted'),
+    'approved_count', (SELECT COUNT(*)::int FROM public.applications WHERE status = 'approved'),
+    'enrolled_count', (SELECT COUNT(*)::int FROM public.applications WHERE status = 'enrolled'),
+    'rejected_count', (SELECT COUNT(*)::int FROM public.applications WHERE status = 'not_successful'),
+    'by_programme', prog_rows,
+    'by_level', level_rows,
+    'recent_submissions', recent_rows
+  ) INTO metrics_result;
+
+  RETURN metrics_result;
+END;
+$$;
+
+-- 7. Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_applications_status ON public.applications(status);
+CREATE INDEX IF NOT EXISTS idx_applications_level ON public.applications(level);
+CREATE INDEX IF NOT EXISTS idx_applications_created_at ON public.applications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_applications_applicant_id ON public.applications(applicant_id);
+CREATE INDEX IF NOT EXISTS idx_applications_campaign_status ON public.applications(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_staff_profiles_user_active ON public.staff_profiles(user_id, active);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
+
+-- 8. Permissions & Grants
 REVOKE ALL ON FUNCTION public.list_registered_users() FROM public;
 GRANT EXECUTE ON FUNCTION public.list_registered_users() TO authenticated, service_role;
 
@@ -219,5 +318,8 @@ GRANT EXECUTE ON FUNCTION public.register_application_document(uuid, text, text,
 
 REVOKE ALL ON FUNCTION public.complete_requested_document_upload(uuid, uuid, text, text, text, bigint) FROM public;
 GRANT EXECUTE ON FUNCTION public.complete_requested_document_upload(uuid, uuid, text, text, text, bigint) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.get_admin_dashboard_metrics() FROM public;
+GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() TO authenticated, service_role;
 
 COMMIT;
