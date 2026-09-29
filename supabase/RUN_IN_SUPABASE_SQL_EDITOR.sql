@@ -233,9 +233,10 @@ DECLARE
   v_rejected_count int;
   v_total_registered int;
 BEGIN
-  -- Auth check (unchanged)
+  -- Auth check: allow service_role, active staff, or foundation super admins
   IF NOT (
-    EXISTS (
+    auth.role() = 'service_role'
+    OR EXISTS (
       SELECT 1 FROM public.staff_profiles sp
       WHERE sp.user_id = auth.uid() AND sp.active
     )
@@ -341,12 +342,14 @@ BEGIN
 END;
 $$;
 
--- 7. Performance Indexes
+-- 7. Performance Indexes (eliminates Disk IO exhaustion on Free Tier)
 CREATE INDEX IF NOT EXISTS idx_applications_status ON public.applications(status);
 CREATE INDEX IF NOT EXISTS idx_applications_level ON public.applications(level);
 CREATE INDEX IF NOT EXISTS idx_applications_created_at ON public.applications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_applications_applicant_id ON public.applications(applicant_id);
 CREATE INDEX IF NOT EXISTS idx_applications_campaign_status ON public.applications(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_status_history_app_id ON public.application_status_history(application_id);
+CREATE INDEX IF NOT EXISTS idx_audit_events_created_at ON public.audit_events(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_staff_profiles_user_active ON public.staff_profiles(user_id, active);
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
 

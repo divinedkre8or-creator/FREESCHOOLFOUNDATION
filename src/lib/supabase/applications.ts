@@ -449,10 +449,30 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
     console.warn("Client RPC metrics error, trying table queries:", rpcErr);
   }
 
-  // Client-side lightweight fallback aggregation
-  const [profilesRes, appsRes, recentAppsRes] = await Promise.all([
+  // Client-side lightweight fallback aggregation with exact count queries (never capped at 1,000)
+  const [
+    profilesRes,
+    totalAppsRes,
+    draftRes,
+    underReviewRes,
+    submittedRes,
+    docsReqRes,
+    shortlistedRes,
+    approvedRes,
+    enrolledRes,
+    rejectedRes,
+    recentAppsRes,
+  ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase.from("applications").select("id, status, level, programme_id, programmes(id, name)"),
+    supabase.from("applications").select("id", { count: "exact", head: true }),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Draft,status.eq.draft"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Under Review,status.eq.under_review"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Submitted,status.eq.submitted"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Additional Documents Required,status.eq.additional_documents_required"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Shortlisted,status.eq.shortlisted"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Approved,status.eq.approved"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Enrolled,status.eq.enrolled"),
+    supabase.from("applications").select("id", { count: "exact", head: true }).or("status.eq.Rejected,status.eq.not_successful"),
     supabase
       .from("applications")
       .select("id, application_number, personal, level, status, submitted_at, created_at, programmes(name)")
@@ -460,47 +480,29 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
       .limit(6),
   ]);
 
-  const totalRegistered = profilesRes.count ?? (appsRes.data?.length ?? 0);
-  const appRows = (appsRes.data ?? []) as any[];
+  const totalRegistered = profilesRes.count ?? (totalAppsRes.count ?? 0);
+  const draftCount = draftRes.count ?? 0;
+  const underReviewCount = (underReviewRes.count ?? 0) + (submittedRes.count ?? 0);
+  const documentsRequiredCount = docsReqRes.count ?? 0;
+  const shortlistedCount = shortlistedRes.count ?? 0;
+  const approvedCount = approvedRes.count ?? 0;
+  const enrolledCount = enrolledRes.count ?? 0;
+  const rejectedCount = rejectedRes.count ?? 0;
+  const totalApplications = totalAppsRes.count ?? 0;
+  const totalSubmitted = Math.max(0, totalApplications - draftCount);
 
-  const byStatus: Record<string, number> = {};
+  const byStatus: Record<string, number> = {
+    Draft: draftCount,
+    Submitted: submittedRes.count ?? 0,
+    "Under Review": underReviewRes.count ?? 0,
+    Shortlisted: shortlistedCount,
+    "Additional Documents Required": documentsRequiredCount,
+    Approved: approvedCount,
+    Enrolled: enrolledCount,
+    "Not Successful": rejectedCount,
+  };
   const programmeMap: Record<string, { id: string; name: string; count: number }> = {};
   const levelMap: Record<string, number> = {};
-
-  let totalSubmitted = 0;
-  let underReviewCount = 0;
-  let documentsRequiredCount = 0;
-  let shortlistedCount = 0;
-  let approvedCount = 0;
-  let enrolledCount = 0;
-  let rejectedCount = 0;
-  let draftCount = 0;
-
-  for (const app of appRows) {
-    const status = String(app.status || "Draft");
-    byStatus[status] = (byStatus[status] || 0) + 1;
-
-    if (status !== "Draft" && status !== "draft") totalSubmitted++;
-    if (status === "Under Review" || status === "Submitted" || status === "under_review" || status === "submitted") underReviewCount++;
-    if (status === "Additional Documents Required" || status === "additional_documents_required") documentsRequiredCount++;
-    if (status === "Shortlisted" || status === "shortlisted") shortlistedCount++;
-    if (status === "Approved" || status === "approved") approvedCount++;
-    if (status === "Enrolled" || status === "enrolled") enrolledCount++;
-    if (status === "Rejected" || status === "not_successful") rejectedCount++;
-    if (status === "Draft" || status === "draft") draftCount++;
-
-    const level = String(app.level || "ND");
-    levelMap[level] = (levelMap[level] || 0) + 1;
-
-    const prog = app.programmes as { id?: string; name?: string } | null;
-    if (prog?.name) {
-      const progId = prog.id || prog.name;
-      if (!programmeMap[progId]) {
-        programmeMap[progId] = { id: progId, name: prog.name, count: 0 };
-      }
-      programmeMap[progId].count++;
-    }
-  }
 
   const recentSubmissions = ((recentAppsRes.data ?? []) as any[]).map((row) => {
     const personal = (row.personal as Record<string, unknown> | null) || {};
