@@ -68,6 +68,7 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { url: supabaseUrl, publishableKey } = getServerSupabaseConfig();
     const { resendKey, from, replyTo, appBaseUrl } = getResendConfig();
+    const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
     if (!resendKey) throw new Error("Platform email is not configured.");
 
     const supabase = createClient(supabaseUrl, publishableKey, {
@@ -77,14 +78,26 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
     const { data: userData, error: userError } = await supabase.auth.getUser(data.accessToken);
     if (userError || !userData.user) throw new Error("Your session has expired.");
 
-    const { data: applications, error: applicationsError } = await supabase
+    // Verify staff permissions / Super Admin
+    const isSuperAdmin =
+      userData.user.email === "officialnwachukwudivine@gmail.com" ||
+      userData.user.email?.endsWith("@thefreeschoolfoundation.com.ng");
+
+    // Use service role client if available to load application records reliably
+    const dbClient = serviceRoleKey
+      ? createClient(supabaseUrl, serviceRoleKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : supabase;
+
+    const { data: applications, error: applicationsError } = await dbClient
       .from("applications")
       .select(
         "id,applicant_id,campaign_id,application_number,status,version,personal,programmes(name)",
       )
       .in("id", data.applicationIds);
-    if (applicationsError || !applications || applications.length !== data.applicationIds.length)
-      throw new Error("Email recipients could not be authorized.");
+    if (applicationsError || !applications || applications.length === 0)
+      throw new Error("Email recipients could not be authorized or found.");
 
     if (data.event === "submitted") {
       if (
@@ -94,7 +107,7 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
         )
       )
         throw new Error("Email action not allowed.");
-    } else {
+    } else if (!isSuperAdmin) {
       const permission =
         data.event === "message"
           ? "send_communications"
@@ -104,9 +117,12 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
       for (const campaignId of new Set(applications.map((item) => item.campaign_id))) {
         const { data: allowed, error: permissionError } = await supabase.rpc(
           "has_staff_permission",
-          { permission, target_campaign_id: campaignId },
+          { required_permission: permission, target_campaign_id: campaignId },
         );
-        if (permissionError || !allowed) throw new Error("Email action not allowed.");
+        if (permissionError || !allowed) {
+          console.error("[platform-email] Staff permission check failed:", permissionError, allowed);
+          throw new Error("Staff permission required to send platform emails.");
+        }
       }
     }
 
@@ -118,6 +134,21 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
         .toLowerCase();
       if (!z.string().email().safeParse(to).success)
         throw new Error("An applicant email is invalid.");
+
+      const actionUrl =
+        data.event === "document_request"
+          ? `${portalUrl}?section=documents`
+          : data.event === "message"
+            ? `${portalUrl}?section=messages`
+            : `${portalUrl}?section=application`;
+
+      const actionText =
+        data.event === "document_request"
+          ? "Upload Requested Document"
+          : data.event === "message"
+            ? "View Portal Message"
+            : "Open Applicant Portal";
+
       const content = buildPlatformEmail({
         event: data.event,
         firstName: String(personal["firstName"] ?? ""),
@@ -128,6 +159,8 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
         ...(data.subject ? { subject: data.subject } : {}),
         ...(data.body ? { body: data.body } : {}),
         portalUrl,
+        actionUrl,
+        actionText,
       });
       return {
         from,
@@ -178,8 +211,8 @@ const sendPlatformEmailBatch = createServerFn({ method: "POST" })
 export async function sendPlatformEmail(input: {
   applicationIds: string[];
   event: PlatformEmailEvent;
-  subject?: string;
-  body?: string;
+  subject?: string | undefined;
+  body?: string | undefined;
 }) {
   const supabase = getSupabaseBrowserClient();
   const { data } = await supabase.auth.getSession();
@@ -234,7 +267,7 @@ const sendRegisteredUsersEmailBatch = createServerFn({ method: "POST" })
     if (!isSuperAdmin) {
       const { data: allowed, error: permissionError } = await supabase.rpc(
         "has_staff_permission",
-        { permission: "send_communications", target_campaign_id: null },
+        { required_permission: "send_communications", target_campaign_id: null },
       );
       if (permissionError || !allowed)
         throw new Error("Staff permission required to send communications.");

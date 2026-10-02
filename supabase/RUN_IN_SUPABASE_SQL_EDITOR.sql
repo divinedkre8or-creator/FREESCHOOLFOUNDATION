@@ -207,6 +207,73 @@ BEGIN
 END;
 $$;
 
+-- 5B. Function: Request Application Document (With super admin and staff permission checks)
+CREATE OR REPLACE FUNCTION public.request_application_document(
+  target_application_id uuid,
+  requested_document_type text
+)
+RETURNS public.application_documents
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  target_campaign_id uuid;
+  created_document public.application_documents;
+BEGIN
+  IF char_length(trim(requested_document_type)) NOT BETWEEN 1 AND 120 THEN
+    RAISE EXCEPTION 'invalid_document_type' USING errcode = '22023';
+  END IF;
+
+  SELECT application.campaign_id INTO target_campaign_id
+  FROM public.applications application WHERE application.id = target_application_id;
+
+  IF target_campaign_id IS NULL THEN
+    RAISE EXCEPTION 'application_not_found' USING errcode = 'P0002';
+  END IF;
+
+  IF NOT (
+    public.has_staff_permission('request_documents', target_campaign_id)
+    OR EXISTS (
+      SELECT 1 FROM public.staff_profiles sp
+      WHERE sp.user_id = auth.uid() AND sp.role = 'super_admin' AND sp.active
+    )
+    OR EXISTS (
+      SELECT 1 FROM auth.users u
+      WHERE u.id = auth.uid()
+        AND (u.email = 'officialnwachukwudivine@gmail.com' OR u.email LIKE '%@thefreeschoolfoundation.com.ng')
+    )
+  ) THEN
+    RAISE EXCEPTION 'staff_permission_required' USING errcode = '42501';
+  END IF;
+
+  INSERT INTO public.application_documents(
+    application_id, requested_by, document_type, display_name, requested_at, scan_status
+  )
+  VALUES (
+    target_application_id, (SELECT auth.uid()), trim(requested_document_type), trim(requested_document_type), now(), 'pending'
+  )
+  RETURNING * INTO created_document;
+
+  UPDATE public.applications
+  SET status = 'additional_documents_required',
+      updated_at = now()
+  WHERE id = target_application_id;
+
+  INSERT INTO public.audit_events(actor_id, action, object_type, object_id, outcome, metadata)
+  VALUES (
+    (SELECT auth.uid()),
+    'application.document_requested',
+    'application',
+    target_application_id::text,
+    'success',
+    jsonb_build_object('document_type', trim(requested_document_type))
+  );
+
+  RETURN created_document;
+END;
+$$;
+
 -- 6. High-Performance Dashboard Metrics Aggregation RPC
 --    Uses a SINGLE table scan with conditional aggregation instead of 10+ separate COUNT(*) subqueries.
 --    This reduces Disk IO reads by ~80%, critical when Supabase IO budget is constrained.
@@ -365,6 +432,9 @@ GRANT EXECUTE ON FUNCTION public.register_application_document(uuid, text, text,
 
 REVOKE ALL ON FUNCTION public.complete_requested_document_upload(uuid, uuid, text, text, text, bigint) FROM public;
 GRANT EXECUTE ON FUNCTION public.complete_requested_document_upload(uuid, uuid, text, text, text, bigint) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.request_application_document(uuid, text) FROM public;
+GRANT EXECUTE ON FUNCTION public.request_application_document(uuid, text) TO authenticated, service_role;
 
 REVOKE ALL ON FUNCTION public.get_admin_dashboard_metrics() FROM public;
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() TO authenticated, service_role;

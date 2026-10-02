@@ -410,15 +410,15 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
         "Not Successful": Number(raw.rejected_count ?? 0),
       };
 
-      const recentSubmissions = (raw.recent_submissions ?? []).map((row: Record<string, any>) => ({
-        id: String(row.id),
-        appNumber: String(row.app_number || "FSF-PENDING"),
-        applicantName: String(row.applicant_name || "Applicant"),
-        programme: String(row.programme || "General"),
-        level: String(row.level || "ND"),
-        status: (row.status || "Draft") as ApplicationStatus,
-        submittedAt: row.submitted_at ? String(row.submitted_at) : null,
-        createdAt: String(row.created_at),
+      const recentSubmissions = (raw["recent_submissions"] ?? []).map((row: Record<string, any>) => ({
+        id: String(row["id"]),
+        appNumber: String(row["app_number"] || "FSF-PENDING"),
+        applicantName: String(row["applicant_name"] || "Applicant"),
+        programme: String(row["programme"] || "General"),
+        level: String(row["level"] || "ND"),
+        status: (row["status"] || "Draft") as ApplicationStatus,
+        submittedAt: row["submitted_at"] ? String(row["submitted_at"]) : null,
+        createdAt: String(row["created_at"]),
       }));
 
       return {
@@ -533,7 +533,7 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
     enrolledCount,
     rejectedCount,
     draftCount,
-    totalApplications: appRows.length,
+    totalApplications,
     byStatus,
     byProgramme: Object.values(programmeMap),
     byLevel: Object.entries(levelMap).map(([level, count]) => ({ level, count })),

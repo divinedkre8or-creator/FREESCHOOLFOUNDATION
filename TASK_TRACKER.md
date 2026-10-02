@@ -89,12 +89,12 @@ This is the durable execution tracker. Update a row when work starts, becomes bl
 
 | ID    | Status  | Task                                    | Depends on   | Acceptance / evidence                                           |
 | ----- | ------- | --------------------------------------- | ------------ | --------------------------------------------------------------- |
-| P5-01 | REVIEW  | Individual portal messaging             | P3-04, P4-03 | Durable RPC and applicant notification UI; hosted proof pending |
-| P5-02 | PLANNED | Audience query and recipient preview    | P4-02        | Preview matches resolved recipients                             |
-| P5-03 | REVIEW  | Bulk portal messaging                   | P5-02        | Status-targeted durable send wired; failure proof pending       |
-| P5-04 | PLANNED | Announcement authoring and targeting    | P3-05, P5-02 | Targeting and publish audit tested                              |
-| P5-05 | PLANNED | SMS provider adapter and queue          | P0-07, P5-01 | Sandbox delivery, retries, redaction, and cost limits proven    |
-| P5-06 | PLANNED | Delivery status and communication audit | P5-05        | Portal truth survives SMS failure                               |
+| P5-01 | REVIEW      | Individual portal messaging             | P3-04, P4-03 | Durable RPC, portal notifications, and direct Resend email dispatch; live test passing |
+| P5-02 | IN_PROGRESS | Audience query and recipient preview    | P4-02        | Preview matches resolved recipients; registered users & applicant filtering wired      |
+| P5-03 | REVIEW      | Bulk portal messaging & email dispatch  | P5-02        | Status-targeted durable send and Resend batch dispatch verified                        |
+| P5-04 | PLANNED     | Announcement authoring and targeting    | P3-05, P5-02 | Targeting and publish audit tested                                                     |
+| P5-05 | PLANNED     | SMS provider adapter and queue          | P0-07, P5-01 | Sandbox delivery, retries, redaction, and cost limits proven                           |
+| P5-06 | REVIEW      | Delivery status and communication audit | P5-05        | Resend Pro integration verified with live domain delivery                              |
 
 ## P6 — Campaigns and staff
 

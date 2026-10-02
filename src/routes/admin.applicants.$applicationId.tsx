@@ -867,9 +867,11 @@ function ApplicantProfile() {
                     await sendPlatformEmail({
                       applicationIds: [application.id],
                       event: "status",
+                      ...(statusMessage ? { body: statusMessage } : {}),
                     });
-                  } catch {
+                  } catch (err) {
                     setStatusMessage("");
+                    console.error("Status email dispatch error:", err);
                     return "Status updated, but email notification failed. Retry from Communications.";
                   }
                   setStatusMessage("");
@@ -1005,13 +1007,14 @@ function ApplicantProfile() {
                       event: "document_request",
                       body: documentType,
                     });
-                  } catch {
+                  } catch (err) {
                     setDocumentType("");
-                    return "Document request added to portal, but email failed.";
+                    console.error("Document request email dispatch error:", err);
+                    return `Document request registered in portal, but email failed: ${err instanceof Error ? err.message : "check Resend configuration"}`;
                   }
                   setDocumentType("");
                   return undefined;
-                }, "Document request added to candidate portal.")
+                }, "Document request added to candidate portal and email notification dispatched.")
               }
             >
               Request From Candidate

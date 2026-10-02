@@ -44,4 +44,34 @@ describe("buildPlatformEmail", () => {
     expect(email.html).toContain("Complete Application Now");
     expect(email.text).toContain("Complete Application Now: https://example.com/apply");
   });
+
+  it("renders a document request email with document name and upload link", () => {
+    const email = buildPlatformEmail({
+      event: "document_request",
+      firstName: "Ifeanyi",
+      applicationNumber: "FSF-2026-0099",
+      body: "National Diploma Transcript",
+      portalUrl: "https://example.com/portal",
+      actionUrl: "https://example.com/portal?section=documents",
+      actionText: "Upload Requested Document",
+    });
+    expect(email.subject).toContain("Document requested");
+    expect(email.html).toContain("National Diploma Transcript");
+    expect(email.html).toContain("Upload Requested Document");
+    expect(email.html).toContain('href="https://example.com/portal?section=documents"');
+    expect(email.text).toContain("FSF-2026-0099");
+  });
+
+  it("renders a status update email with reviewer note included", () => {
+    const email = buildPlatformEmail({
+      event: "status",
+      firstName: "Zainab",
+      status: "shortlisted",
+      body: "Please attend the virtual briefing on Thursday.",
+      portalUrl: "https://example.com/portal",
+    });
+    expect(email.subject).toContain("shortlisted");
+    expect(email.html).toContain("Please attend the virtual briefing on Thursday.");
+    expect(email.text).toContain("Please attend the virtual briefing on Thursday.");
+  });
 });

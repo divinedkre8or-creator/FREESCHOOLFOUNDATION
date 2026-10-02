@@ -112,6 +112,20 @@ function PortalPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("section") || params.get("tab");
+    if (
+      target === "documents" ||
+      target === "messages" ||
+      target === "application" ||
+      target === "overview"
+    ) {
+      setSection(target as PortalSection);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!ready) return;
     let active = true;
     const refresh = async () => {

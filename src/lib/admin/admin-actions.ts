@@ -211,15 +211,15 @@ export const getAdminDashboardMetricsServerFn = createServerFn({ method: "POST" 
           "Not Successful": Number(raw.rejected_count ?? 0),
         };
 
-        const recentSubmissions = (raw.recent_submissions ?? []).map((row: Record<string, any>) => ({
-          id: String(row.id),
-          appNumber: String(row.app_number || "FSF-PENDING"),
-          applicantName: String(row.applicant_name || "Applicant"),
-          programme: String(row.programme || "General"),
-          level: String(row.level || "ND"),
-          status: (row.status || "Draft") as ApplicationStatus,
-          submittedAt: row.submitted_at ? String(row.submitted_at) : null,
-          createdAt: String(row.created_at),
+        const recentSubmissions = (raw["recent_submissions"] ?? []).map((row: Record<string, any>) => ({
+          id: String(row["id"]),
+          appNumber: String(row["app_number"] || "FSF-PENDING"),
+          applicantName: String(row["applicant_name"] || "Applicant"),
+          programme: String(row["programme"] || "General"),
+          level: String(row["level"] || "ND"),
+          status: (row["status"] || "Draft") as ApplicationStatus,
+          submittedAt: row["submitted_at"] ? String(row["submitted_at"]) : null,
+          createdAt: String(row["created_at"]),
         }));
 
         return {
@@ -334,7 +334,7 @@ export const getAdminDashboardMetricsServerFn = createServerFn({ method: "POST" 
       enrolledCount,
       rejectedCount,
       draftCount,
-      totalApplications: appRows.length,
+      totalApplications,
       byStatus,
       byProgramme: Object.values(programmeMap),
       byLevel: Object.entries(levelMap).map(([level, count]) => ({ level, count })),
@@ -749,6 +749,42 @@ export const requestApplicationDocumentServerFn = createServerFn({ method: "POST
       outcome: "success",
       metadata: { requested_type: data.documentType },
     });
+
+    // Dispatch in-portal notification so applicant immediately sees it in portal messages
+    try {
+      const campaignId = "20000000-0000-0000-0000-000000000001";
+      const { data: insertedMsg } = await adminClient
+        .from("messages")
+        .insert({
+          campaign_id: campaignId,
+          sender_id: userData.user.id,
+          subject: `Document Required: ${data.documentType.trim()}`,
+          body: `The scholarship review committee has requested you to upload: "${data.documentType.trim()}". Please open the Document Registry in your portal to upload this document.`,
+          channel: "portal",
+          idempotency_key: `docreq:${data.applicationId}:${data.documentType.trim().toLowerCase()}:${Date.now()}`,
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (insertedMsg) {
+        const { data: appRow } = await adminClient
+          .from("applications")
+          .select("applicant_id")
+          .eq("id", data.applicationId)
+          .single();
+
+        if (appRow?.applicant_id) {
+          await adminClient.from("message_recipients").insert({
+            message_id: insertedMsg.id,
+            applicant_id: appRow.applicant_id,
+            application_id: data.applicationId,
+            delivery_status: "delivered",
+          });
+        }
+      }
+    } catch (msgErr) {
+      console.warn("Could not dispatch in-portal message for doc request:", msgErr);
+    }
 
     return { success: true };
   });
