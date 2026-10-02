@@ -92,10 +92,6 @@ Programmes currently available:
 
 - Computer Science
 
-- Electrical Engineering
-
-- Computer Engineering
-
 Scholarship:
 
 100% Full Scholarship
@@ -257,10 +253,6 @@ Then chooses:
 - Business Administration and Management
 
 - Computer Science
-
-- Electrical Engineering
-
-- Computer Engineering
 
 Make the application intelligent.
 

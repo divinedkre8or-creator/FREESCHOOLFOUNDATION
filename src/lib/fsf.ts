@@ -5,38 +5,28 @@
 export type Level = "ND";
 
 export const PROGRAMMES = [
-  "Mass Communication",
   "Business Administration and Management",
+  "Mass Communication",
   "Computer Science",
-  "Electrical Engineering",
-  "Computer Engineering",
 ] as const;
 
 export type Programme = (typeof PROGRAMMES)[number];
 
 export const PROGRAMME_DETAILS: Record<Programme, { blurb: string; careers: string[] }> = {
-  "Mass Communication": {
-    blurb:
-      "Reporting, broadcasting, public relations and digital media for Nigeria's fast-growing media industry.",
-    careers: ["Journalist", "PR Officer", "Content Producer", "Media Analyst"],
-  },
   "Business Administration and Management": {
     blurb:
       "Management, accounting basics, entrepreneurship and operations for people building or running businesses.",
     careers: ["Operations Officer", "Entrepreneur", "Admin Manager", "Sales Lead"],
   },
+  "Mass Communication": {
+    blurb:
+      "Reporting, broadcasting, public relations and digital media for Nigeria's fast-growing media industry.",
+    careers: ["Journalist", "PR Officer", "Content Producer", "Media Analyst"],
+  },
   "Computer Science": {
     blurb:
       "Programming, databases, networking and problem solving for careers in software and technology.",
     careers: ["Software Developer", "Data Analyst", "IT Support", "Web Developer"],
-  },
-  "Electrical Engineering": {
-    blurb: "Electrical installation, power systems, electronics and maintenance practice.",
-    careers: ["Electrical Technician", "Power Systems Officer", "Maintenance Engineer"],
-  },
-  "Computer Engineering": {
-    blurb: "Hardware, embedded systems, networking and computer maintenance skills.",
-    careers: ["Hardware Engineer", "Network Engineer", "Systems Technician"],
   },
 };
 
@@ -425,7 +415,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         first: "Emeka",
         last: "Nwachukwu",
         level: "ND",
-        programme: "Electrical Engineering",
+        programme: "Computer Science",
         status: "Submitted",
         days: 2,
         state: "Imo",
@@ -445,7 +435,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         first: "Samuel",
         last: "Ikenna",
         level: "ND",
-        programme: "Computer Engineering",
+        programme: "Business Administration and Management",
         status: "Additional Documents Required",
         days: 5,
         state: "Abia",
@@ -495,7 +485,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         first: "Rita",
         last: "Obi",
         level: "ND",
-        programme: "Electrical Engineering",
+        programme: "Mass Communication",
         status: "Submitted",
         days: 3,
         state: "Anambra",
@@ -505,7 +495,7 @@ export const DEMO_APPLICATIONS: Application[] = INCLUDE_DEMO_DATA
         first: "Joshua",
         last: "Effiong",
         level: "ND",
-        programme: "Computer Engineering",
+        programme: "Computer Science",
         status: "Shortlisted",
         days: 8,
         state: "Cross River",

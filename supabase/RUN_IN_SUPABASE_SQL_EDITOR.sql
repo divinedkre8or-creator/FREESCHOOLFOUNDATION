@@ -10,6 +10,11 @@ INSERT INTO public.staff_bootstrap_allowlist (email)
 VALUES ('officialnwachukwudivine@gmail.com')
 ON CONFLICT (email) DO NOTHING;
 
+-- 1B. Deactivate removed engineering programmes (keeping only Business Admin, Mass Comm, and Computer Science active)
+UPDATE public.programmes
+SET active = false
+WHERE name IN ('Electrical Engineering', 'Computer Engineering');
+
 -- 2. Function: List All Registered Users (Joins auth.users, profiles, and applications)
 CREATE OR REPLACE FUNCTION public.list_registered_users()
 RETURNS TABLE (

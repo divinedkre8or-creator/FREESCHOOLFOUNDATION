@@ -132,7 +132,7 @@ function Home() {
             <div>
               <h2 className="text-2xl font-extrabold md:text-4xl">Available programmes</h2>
               <p className="mt-3 max-w-xl text-muted-foreground">
-                Five programmes, available at National Diploma (ND) level.
+                Three programmes, available at National Diploma (ND) level.
               </p>
             </div>
             <Button asChild variant="outline">

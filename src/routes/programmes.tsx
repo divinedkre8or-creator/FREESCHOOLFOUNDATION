@@ -10,7 +10,7 @@ export const Route = createFileRoute("/programmes")({
     seoHead({
       title: "Fully Funded ND Programmes | The Free School Foundation",
       description:
-        "Explore fully funded National Diploma (ND) options in Computer Science, Computer Engineering, Electrical Engineering, Mass Communication and Business Administration.",
+        "Explore fully funded National Diploma (ND) options in Business Administration and Management, Mass Communication, and Computer Science.",
       path: "/programmes",
       scripts: [
         {
@@ -45,7 +45,7 @@ function ProgrammesPage() {
     <SiteLayout>
       <PageHero
         eyebrow="Programmes"
-        title="Five programmes, fully funded"
+        title="Three programmes, fully funded"
         description="Every programme below is available at National Diploma (ND) level under the current scholarship."
       />
 
