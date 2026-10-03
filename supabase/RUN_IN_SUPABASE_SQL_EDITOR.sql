@@ -445,3 +445,106 @@ REVOKE ALL ON FUNCTION public.get_admin_dashboard_metrics() FROM public;
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() TO authenticated, service_role;
 
 COMMIT;
+
+-- ==============================================================================
+-- 7. EXECUTE REVOCATION OF PRE-SEPTEMBER 29 APPROVALS (1,885 APPLICANTS)
+--    Run the block below in your Supabase SQL Editor.
+--    It will move the 1,885 pre-Sept 29 approvals to under_review,
+--    preserve the post-Sept 29 approvals (10 valid), and return the final counts.
+-- ==============================================================================
+
+BEGIN;
+
+-- 1. Insert audit history record for each pre-Sept 29 application
+WITH app_approvals AS (
+  SELECT 
+    a.id,
+    a.status AS current_status,
+    a.applicant_id,
+    COALESCE(
+      (
+        SELECT MAX(h.created_at) 
+        FROM public.application_status_history h 
+        WHERE h.application_id = a.id AND h.to_status = 'approved'
+      ),
+      a.updated_at
+    ) AS effective_approved_at
+  FROM public.applications a
+  WHERE a.status IN ('approved', 'enrolled')
+),
+target_apps AS (
+  SELECT id, current_status, applicant_id
+  FROM app_approvals
+  WHERE effective_approved_at < '2026-09-29T00:00:00Z'
+)
+INSERT INTO public.application_status_history (
+  application_id,
+  from_status,
+  to_status,
+  changed_by,
+  internal_reason,
+  applicant_message,
+  created_at
+)
+SELECT 
+  id,
+  current_status::public.application_status,
+  'under_review'::public.application_status,
+  applicant_id,
+  'Reverted pre-September 29 batch approval by Board directive',
+  'Your application status is currently under active review by the scholarship board.',
+  NOW()
+FROM target_apps;
+
+-- 2. Update status back to under_review for all pre-Sept 29 approvals
+WITH app_approvals AS (
+  SELECT 
+    a.id,
+    COALESCE(
+      (
+        SELECT MAX(h.created_at) 
+        FROM public.application_status_history h 
+        WHERE h.application_id = a.id AND h.to_status = 'approved'
+      ),
+      a.updated_at
+    ) AS effective_approved_at
+  FROM public.applications a
+  WHERE a.status IN ('approved', 'enrolled')
+)
+UPDATE public.applications
+SET 
+  status = 'under_review',
+  updated_at = NOW()
+WHERE id IN (
+  SELECT id 
+  FROM app_approvals 
+  WHERE effective_approved_at < '2026-09-29T00:00:00Z'
+);
+
+-- 3. Record audit event
+INSERT INTO public.audit_events (
+  actor_id,
+  action,
+  object_type,
+  outcome,
+  metadata
+)
+SELECT 
+  '00000000-0000-0000-0000-000000000000'::uuid,
+  'application.pre_sept29_approvals_revoked',
+  'application_batch',
+  'success',
+  jsonb_build_object(
+    'cutoff_date', '2026-09-29T00:00:00Z',
+    'reverted_to', 'under_review',
+    'executed_at', NOW()
+  );
+
+COMMIT;
+
+-- 4. Immediate Verification Query (Shows remaining approved vs new under_review)
+SELECT 
+  (SELECT COUNT(*) FROM public.applications WHERE status = 'approved') AS remaining_approved_count,
+  (SELECT COUNT(*) FROM public.applications WHERE status = 'under_review') AS under_review_count,
+  (SELECT COUNT(*) FROM public.applications WHERE status = 'submitted') AS submitted_count;
+

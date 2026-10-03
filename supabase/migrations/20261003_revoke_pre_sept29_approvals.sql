@@ -38,8 +38,7 @@
 -- ------------------------------------------------------------------------------
 BEGIN;
 
--- 1. Identify target applications approved before September 29, 2026
-CREATE TEMP TABLE tmp_pre_sept29_approved_apps AS
+-- 1. Insert audit history record for each reverted application
 WITH app_approvals AS (
   SELECT 
     a.id,
@@ -55,12 +54,12 @@ WITH app_approvals AS (
     ) AS effective_approved_at
   FROM public.applications a
   WHERE a.status IN ('approved', 'enrolled')
+),
+target_apps AS (
+  SELECT id, current_status, applicant_id
+  FROM app_approvals
+  WHERE effective_approved_at < '2026-09-29T00:00:00Z'
 )
-SELECT id, current_status, applicant_id, effective_approved_at
-FROM app_approvals
-WHERE effective_approved_at < '2026-09-29T00:00:00Z';
-
--- 2. Insert audit history record for each reverted application
 INSERT INTO public.application_status_history (
   application_id,
   from_status,
@@ -78,16 +77,34 @@ SELECT
   'Reverted pre-September 29 batch approval by Board directive',
   'Your application status is currently under active review by the scholarship board.',
   NOW()
-FROM tmp_pre_sept29_approved_apps;
+FROM target_apps;
 
--- 3. Update application status back to under_review
+-- 2. Update application status back to under_review
+WITH app_approvals AS (
+  SELECT 
+    a.id,
+    COALESCE(
+      (
+        SELECT MAX(h.created_at) 
+        FROM public.application_status_history h 
+        WHERE h.application_id = a.id AND h.to_status = 'approved'
+      ),
+      a.updated_at
+    ) AS effective_approved_at
+  FROM public.applications a
+  WHERE a.status IN ('approved', 'enrolled')
+)
 UPDATE public.applications
 SET 
   status = 'under_review',
   updated_at = NOW()
-WHERE id IN (SELECT id FROM tmp_pre_sept29_approved_apps);
+WHERE id IN (
+  SELECT id 
+  FROM app_approvals 
+  WHERE effective_approved_at < '2026-09-29T00:00:00Z'
+);
 
--- 4. Record consolidated audit event
+-- 3. Record consolidated audit event
 INSERT INTO public.audit_events (
   actor_id,
   action,
@@ -101,12 +118,14 @@ SELECT
   'application_batch',
   'success',
   jsonb_build_object(
-    'revoked_count', (SELECT COUNT(*) FROM tmp_pre_sept29_approved_apps),
     'cutoff_date', '2026-09-29T00:00:00Z',
     'reverted_to', 'under_review',
     'executed_at', NOW()
   );
 
-DROP TABLE tmp_pre_sept29_approved_apps;
-
 COMMIT;
+
+-- 4. Verification Query
+SELECT 
+  (SELECT COUNT(*) FROM public.applications WHERE status = 'approved') AS remaining_approved_count,
+  (SELECT COUNT(*) FROM public.applications WHERE status = 'under_review') AS under_review_count;
