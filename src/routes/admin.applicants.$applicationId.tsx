@@ -456,6 +456,18 @@ function ApplicantProfile() {
                     ? "Acknowledged & Agreed"
                     : "Standard",
                 ],
+                [
+                  "Church Ministry Partnership & Activities",
+                  application.personal.churchMinistryEthosAcknowledged
+                    ? "Acknowledged & Pledged"
+                    : "Standard",
+                ],
+                [
+                  "Scholarship Terms Sign-Off",
+                  application.personal.scholarshipCommitmentAcknowledged
+                    ? "Signed & Understood"
+                    : "Standard",
+                ],
                 ["Residential Address", application.personal.address],
                 ["Contact Phone", application.personal.phone],
               ]}

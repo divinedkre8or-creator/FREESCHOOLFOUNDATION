@@ -8,9 +8,11 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  Church,
   Clock,
   Copy,
   FileCheck2,
+  FileText,
   LoaderCircle,
   Mail,
   Printer,
@@ -128,6 +130,8 @@ function ApplyPage() {
   const [declaration, setDeclaration] = useState(false);
   const [consent, setConsent] = useState(false);
   const [attendanceAcknowledged, setAttendanceAcknowledged] = useState(false);
+  const [churchMinistryAcknowledged, setChurchMinistryAcknowledged] = useState(false);
+  const [commitmentAcknowledged, setCommitmentAcknowledged] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState<Application | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -239,10 +243,17 @@ function ApplyPage() {
       nextErrors.push("Complete all required personal information, including State of Origin and Religion.");
     if (step === 2 && (!form.secondarySchool || !form.examYear))
       nextErrors.push("Add your secondary school and examination year.");
-    if (step === 3 && (!form.reason || !form.goals))
-      nextErrors.push("Answer both scholarship questions.");
-    if (step === 5 && (!declaration || !consent || !attendanceAcknowledged))
-      nextErrors.push("You must acknowledge the Aba Study Centre physical attendance notice, accept the declaration, and provide communication consent to submit.");
+    if (
+      step === 5 &&
+      (!declaration ||
+        !consent ||
+        !attendanceAcknowledged ||
+        !churchMinistryAcknowledged ||
+        !commitmentAcknowledged)
+    )
+      nextErrors.push(
+        "Please review and accept all required acknowledgments (Aba physical attendance, church ministry partnership, commitment sign-off, application declaration, and communication consent) to submit.",
+      );
     setErrors(nextErrors);
     return nextErrors.length === 0;
   };
@@ -300,6 +311,8 @@ function ApplyPage() {
           stateOfOrigin: form.stateOfOrigin,
           religion: form.religion,
           physicalAttendanceAcknowledged: true,
+          churchMinistryEthosAcknowledged: true,
+          scholarshipCommitmentAcknowledged: true,
         },
         education,
         scholarshipResponses: {
@@ -342,6 +355,8 @@ function ApplyPage() {
         stateOfOrigin: form.stateOfOrigin,
         religion: form.religion,
         physicalAttendanceAcknowledged: true,
+        churchMinistryEthosAcknowledged: true,
+        scholarshipCommitmentAcknowledged: true,
       },
       education,
       scholarship: {
@@ -554,9 +569,13 @@ function ApplyPage() {
                 declaration={declaration}
                 consent={consent}
                 attendanceAcknowledged={attendanceAcknowledged}
+                churchMinistryAcknowledged={churchMinistryAcknowledged}
+                commitmentAcknowledged={commitmentAcknowledged}
                 setDeclaration={setDeclaration}
                 setConsent={setConsent}
                 setAttendanceAcknowledged={setAttendanceAcknowledged}
+                setChurchMinistryAcknowledged={setChurchMinistryAcknowledged}
+                setCommitmentAcknowledged={setCommitmentAcknowledged}
                 edit={setStep}
               />
             )}
@@ -722,6 +741,19 @@ function Personal({
             ))}
           </select>
         </Field>
+        <div className="md:col-span-2 rounded-xl border border-brand-green/20 bg-brand-green-soft/50 p-4">
+          <div className="flex items-start gap-3">
+            <Church className="h-5 w-5 shrink-0 text-brand-green-dark mt-0.5" />
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-green-dark">
+                Church Ministry Sponsorship & Community Ethos
+              </h4>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                The Free School Foundation scholarship is 100% tuition-free, fully funded and facilitated in partnership with our Christian church ministry. All admitted scholars agree to actively participate in scheduled church fellowship, community activities, and moral leadership sessions throughout their academic journey.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -966,9 +998,13 @@ function Review({
   declaration,
   consent,
   attendanceAcknowledged,
+  churchMinistryAcknowledged,
+  commitmentAcknowledged,
   setDeclaration,
   setConsent,
   setAttendanceAcknowledged,
+  setChurchMinistryAcknowledged,
+  setCommitmentAcknowledged,
   edit,
 }: {
   form: FormState;
@@ -976,9 +1012,13 @@ function Review({
   declaration: boolean;
   consent: boolean;
   attendanceAcknowledged: boolean;
+  churchMinistryAcknowledged: boolean;
+  commitmentAcknowledged: boolean;
   setDeclaration: (value: boolean) => void;
   setConsent: (value: boolean) => void;
   setAttendanceAcknowledged: (value: boolean) => void;
+  setChurchMinistryAcknowledged: (value: boolean) => void;
+  setCommitmentAcknowledged: (value: boolean) => void;
   edit: (step: number) => void;
 }) {
   const cards = useMemo(
@@ -1008,20 +1048,53 @@ function Review({
     <>
       <h1 className="text-2xl font-extrabold md:text-3xl">Review before you submit</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Check your information. Submission does not guarantee scholarship approval or admission.
+        Check your information carefully. Submission does not guarantee scholarship approval or admission.
       </p>
 
-      {/* Prominent Aba Study Centre Physical Attendance Caveat */}
-      <div className="mt-6 rounded-xl border-2 border-brand-orange/40 bg-brand-orange-soft/30 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <Building2 className="h-5 w-5 shrink-0 text-brand-orange mt-0.5" />
-          <div>
-            <h3 className="text-sm font-extrabold uppercase tracking-wider text-brand-orange">
-              Mandatory Physical Attendance Notice • Aba Study Centre
-            </h3>
-            <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-foreground">
-              Please note: This scholarship requires <strong>mandatory physical on-ground attendance</strong> at our <strong>Aba Study Centre</strong> (Abia State). All candidates must be physically available on ground to attend lectures, laboratory practicals, and semester examinations.
-            </p>
+      {/* Prominent Guidance & Ethos Callouts */}
+      <div className="mt-6 space-y-3">
+        {/* Physical Attendance Notice */}
+        <div className="rounded-xl border-2 border-brand-orange/40 bg-brand-orange-soft/30 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <Building2 className="h-5 w-5 shrink-0 text-brand-orange mt-0.5" />
+            <div>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-brand-orange">
+                Mandatory Physical Attendance Notice • Aba Study Centre
+              </h3>
+              <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-foreground">
+                Please note: This scholarship requires <strong>mandatory physical on-ground attendance</strong> at our <strong>Aba Study Centre / Story Center</strong> in Aba, Abia State. All candidates must be physically available on ground to attend lectures, laboratory practicals, and semester examinations. This is not a distance or online program.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Church Ministry Sponsorship Notice */}
+        <div className="rounded-xl border-2 border-brand-green/30 bg-brand-green-soft/40 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <Church className="h-5 w-5 shrink-0 text-brand-green-dark mt-0.5" />
+            <div>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-brand-green-dark">
+                Church Ministry Sponsorship & Faith Ethos Agreement
+              </h3>
+              <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-foreground">
+                This scholarship program is 100% tuition-free because it is sponsored and funded in partnership with our Christian church ministry. As a condition of this sponsorship, all admitted scholars agree to actively participate in scheduled church fellowship, community activities, and moral leadership sessions throughout the programme.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Informed Sign-Off Notice */}
+        <div className="rounded-xl border border-border bg-secondary/40 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <FileText className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+            <div>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-foreground">
+                Informed Commitment & Sign-Off Requirement
+              </h3>
+              <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
+                Before submitting, please ensure you clearly understand what you are signing off for. Physical on-ground attendance in Aba and active fellowship participation are mandatory conditions. Failure or refusal to attend lectures or participate in church ministry activities will result in immediate termination of scholarship funding and forfeiture of your admission seat.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -1047,35 +1120,56 @@ function Review({
           </section>
         ))}
       </div>
+
       <div className="mt-6 space-y-4">
-        <label className="flex items-start gap-3 text-sm p-3.5 rounded-lg border border-brand-orange/30 bg-brand-orange-soft/20">
+        <label className="flex items-start gap-3 text-sm p-3.5 rounded-lg border border-brand-orange/30 bg-brand-orange-soft/20 cursor-pointer">
           <Checkbox
             checked={attendanceAcknowledged}
             onCheckedChange={(value) => setAttendanceAcknowledged(value === true)}
           />
           <span>
-            <strong className="text-brand-orange">Mandatory On-Ground Attendance Acknowledgment:</strong> I confirm that I will be physically available and present at the <strong>Aba Study Centre</strong> (Abia State) for lectures, practicals, and academic requirements throughout the scholarship program.
+            <strong className="text-brand-orange">1. Mandatory On-Ground Attendance:</strong> I confirm that I will be physically available and present on ground at the <strong>Aba Study Centre</strong> (Abia State) for lectures, practicals, and academic requirements throughout the scholarship program.
           </span>
         </label>
-        <label className="flex items-start gap-3 text-sm">
+
+        <label className="flex items-start gap-3 text-sm p-3.5 rounded-lg border border-brand-green/30 bg-brand-green-soft/20 cursor-pointer">
+          <Checkbox
+            checked={churchMinistryAcknowledged}
+            onCheckedChange={(value) => setChurchMinistryAcknowledged(value === true)}
+          />
+          <span>
+            <strong className="text-brand-green-dark">2. Church Ministry Sponsorship & Activities Agreement:</strong> I acknowledge and agree that this scholarship is funded and supported in partnership with a Christian church ministry. I willingly commit to attending scheduled church activities, spiritual fellowship, and upholding Christian moral values throughout my study.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 text-sm p-3.5 rounded-lg border border-border bg-secondary/50 cursor-pointer">
+          <Checkbox
+            checked={commitmentAcknowledged}
+            onCheckedChange={(value) => setCommitmentAcknowledged(value === true)}
+          />
+          <span>
+            <strong className="text-foreground">3. Informed Consent & Scholarship Sign-Off:</strong> I clearly understand and accept what I am signing off for. I understand that scholarship benefits and admission are strictly conditional upon physical attendance and fellowship participation, and that breach of these terms will lead to immediate loss of my scholarship seat.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 text-sm cursor-pointer">
           <Checkbox
             checked={declaration}
             onCheckedChange={(value) => setDeclaration(value === true)}
           />
           <span>
-            I confirm that the information provided is accurate and complete. I understand that
-            submission does not guarantee admission or scholarship approval, and I accept the{" "}
+            <strong className="text-foreground">4. Accuracy Declaration:</strong> I confirm that the information provided is accurate and complete. I understand that submission does not guarantee admission or scholarship approval, and I accept the{" "}
             <Link to="/terms" target="_blank" className="font-bold text-brand-green-dark underline">
               Application Terms
             </Link>
             .
           </span>
         </label>
-        <label className="flex items-start gap-3 text-sm">
+
+        <label className="flex items-start gap-3 text-sm cursor-pointer">
           <Checkbox checked={consent} onCheckedChange={(value) => setConsent(value === true)} />
           <span>
-            I consent to receiving application-related communication from The Free School Foundation
-            and acknowledge the{" "}
+            <strong className="text-foreground">5. Communication Consent:</strong> I consent to receiving application-related communication from The Free School Foundation and acknowledge the{" "}
             <Link
               to="/privacy"
               target="_blank"

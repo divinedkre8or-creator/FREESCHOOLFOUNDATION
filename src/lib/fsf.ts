@@ -203,6 +203,8 @@ export type Application = {
     stateOfOrigin: string;
     religion?: string;
     physicalAttendanceAcknowledged?: boolean;
+    churchMinistryEthosAcknowledged?: boolean;
+    scholarshipCommitmentAcknowledged?: boolean;
     resumptionAttendanceConfirmed?: boolean;
     resumptionAttendanceConfirmedAt?: string;
     resumptionTargetDate?: string;
