@@ -455,6 +455,11 @@ COMMIT;
 
 BEGIN;
 
+-- Explicitly ensure RLS is active on referenced tables (satisfies Supabase linter)
+ALTER TABLE public.application_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_events ENABLE ROW LEVEL SECURITY;
+
 -- 1. Insert audit history record for each pre-Sept 29 application
 WITH app_approvals AS (
   SELECT 
