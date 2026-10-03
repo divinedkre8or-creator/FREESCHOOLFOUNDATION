@@ -16,7 +16,9 @@ import {
   FileCheck,
   FileText,
   HelpCircle,
+  Loader2,
   LogOut,
+  MapPin,
   MessageSquare,
   Printer,
   Shield,
@@ -37,6 +39,7 @@ import {
 import { useCurrentApplication, useStore } from "@/lib/store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
+  confirmApplicantAttendance,
   getDocumentUrl,
   loadMyApplication,
   markMessageRead,
@@ -92,11 +95,52 @@ function PortalPage() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeDocUrl, setActiveDocUrl] = useState<{ name: string; url: string } | null>(null);
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
+  const [confirmingAttendance, setConfirmingAttendance] = useState(false);
+  const [attendanceFeedback, setAttendanceFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [showRsvpModal, setShowRsvpModal] = useState(false);
   const navigate = useNavigate();
 
   const application = useCurrentApplication();
   const { announcements, setState, ready } = useStore();
   const unreadMessages = application?.messages.filter((message) => !message.read) ?? [];
+
+  const handleConfirmAttendance = async () => {
+    if (!application) return;
+    setConfirmingAttendance(true);
+    setAttendanceFeedback(null);
+    try {
+      const res = await confirmApplicantAttendance(application.id);
+      setState((prev) => ({
+        ...prev,
+        applications: prev.applications.map((app) =>
+          app.id === application.id
+            ? {
+                ...app,
+                personal: {
+                  ...app.personal,
+                  physicalAttendanceAcknowledged: true,
+                  resumptionAttendanceConfirmed: true,
+                  resumptionAttendanceConfirmedAt: res.confirmedAt,
+                  resumptionTargetDate: "2027-10-15",
+                },
+              }
+            : app,
+        ),
+      }));
+      setAttendanceFeedback({
+        type: "success",
+        text: "Attendance confirmed! Your physical onboarding seat at Story Center, Aba has been secured for Thursday, October 15, 2027.",
+      });
+      setShowRsvpModal(false);
+    } catch (err) {
+      setAttendanceFeedback({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to record attendance confirmation.",
+      });
+    } finally {
+      setConfirmingAttendance(false);
+    }
+  };
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -397,6 +441,116 @@ function PortalPage() {
                 </p>
               </div>
             </button>
+          )}
+
+          {/* Official Resumption Notice & Physical Onboarding RSVP Card (Approved & Enrolled Scholars) */}
+          {(application.status === "Approved" || application.status === "Enrolled") && (
+            <div className="overflow-hidden rounded-2xl border-2 border-brand-green/30 bg-card p-5 sm:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-green-soft px-3 py-1 text-xs font-extrabold text-brand-green-dark">
+                      <Sparkles className="h-3.5 w-3.5 text-brand-orange" />
+                      Official Resumption & Physical Onboarding
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                      <CalendarDays className="h-3.5 w-3.5 text-brand-green" />
+                      Deadline: Thursday, October 15, 2027
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">
+                    Physical Resumption at Story Center, Aba
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+                    Congratulations on your scholarship award! Please review the essential operational requirements for your academic journey:
+                  </p>
+                </div>
+              </div>
+
+              {/* Requirements Callout Grid */}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs">
+                <div className="rounded-xl border border-border bg-secondary/30 p-3.5">
+                  <div className="flex items-center gap-2 font-bold text-foreground">
+                    <MapPin className="h-4 w-4 text-brand-orange shrink-0" />
+                    Physical On-Ground Presence
+                  </div>
+                  <p className="mt-1.5 text-muted-foreground leading-relaxed">
+                    This programme requires full physical presence for lectures and practical studio sessions. All admitted scholars must relocate and be on ground at our <strong className="text-foreground font-semibold">Story Center in Aba, Abia State</strong>.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border bg-secondary/30 p-3.5">
+                  <div className="flex items-center gap-2 font-bold text-foreground">
+                    <ShieldCheck className="h-4 w-4 text-brand-green shrink-0" />
+                    Church Ministry Partnership Ethos
+                  </div>
+                  <p className="mt-1.5 text-muted-foreground leading-relaxed">
+                    This scholarship is 100% funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar, you are expected to actively participate in the fellowship, values, and community activities of the church organization powering the scholarship.
+                  </p>
+                </div>
+              </div>
+
+              {/* RSVP Attendance Action Area */}
+              <div className="mt-5 pt-4 border-t border-border">
+                {application.personal?.resumptionAttendanceConfirmed ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-emerald-50 border border-emerald-200/80 p-4 dark:bg-emerald-950/30 dark:border-emerald-800/60">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-extrabold text-emerald-900 text-sm dark:text-emerald-200">
+                          Physical Attendance Confirmed ✓
+                        </p>
+                        <p className="text-xs text-emerald-800/90 dark:text-emerald-300 mt-0.5">
+                          You have confirmed that you will be physically on ground in Aba for schooling by <strong>Thursday, October 15, 2027</strong>. Your seat and reception dossier are reserved.
+                        </p>
+                        {application.personal?.resumptionAttendanceConfirmedAt && (
+                          <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 mt-1 font-mono">
+                            Confirmed on {formatDate(application.personal.resumptionAttendanceConfirmedAt)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center self-start sm:self-center gap-1 rounded-full bg-emerald-200/60 px-3 py-1 text-xs font-extrabold text-emerald-900 shrink-0 dark:bg-emerald-900/60 dark:text-emerald-200">
+                      Seat Reserved
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-orange-50/80 border border-brand-orange/30 p-4 dark:bg-amber-950/20 dark:border-amber-800/40">
+                    <div className="space-y-1">
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">
+                        Candidate Action Required
+                      </p>
+                      <p className="font-bold text-foreground text-sm">
+                        Please indicate if you are coming to the physical location
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        We need to know exact numbers to prepare your admission dossier, classroom allocation, and onboarding reception.
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={() => setShowRsvpModal(true)}
+                      className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold shadow-sm h-10 px-5 shrink-0"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Confirm I Am Coming
+                    </Button>
+                  </div>
+                )}
+
+                {attendanceFeedback && (
+                  <div
+                    className={`mt-3 rounded-lg p-3 text-xs font-bold ${
+                      attendanceFeedback.type === "success"
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        : "bg-destructive/10 text-destructive border border-destructive/20"
+                    }`}
+                  >
+                    {attendanceFeedback.text}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Status Details & Key Dossier */}
@@ -809,6 +963,103 @@ function PortalPage() {
                   className="h-full w-full rounded-lg border-0 bg-white"
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RSVP Confirmation Modal Dialog */}
+      {showRsvpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-brand-green-soft p-2.5 text-brand-green-dark">
+                  <CheckCircle2 className="h-6 w-6 text-brand-green" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-foreground">
+                    Confirm Physical Attendance
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    The Free School Foundation — Aba Story Center
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={confirmingAttendance}
+                onClick={() => setShowRsvpModal(false)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-3.5 text-xs text-foreground">
+              <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-3.5 text-amber-950 font-medium dark:bg-amber-950/30 dark:border-amber-800/40 dark:text-amber-200">
+                <p className="font-bold text-sm">Resumption Commitment Notice</p>
+                <p className="mt-1 leading-relaxed">
+                  By confirming attendance, you indicate to the Foundation Board that you will be physically present in Aba for academic onboarding.
+                </p>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-3.5">
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-brand-orange shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">Physical Location:</strong>
+                    <p className="text-muted-foreground">Story Center, Aba, Abia State.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <CalendarDays className="h-4 w-4 text-brand-green shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">Resumption Arrival Deadline:</strong>
+                    <p className="text-muted-foreground">Thursday, October 15, 2027.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">Foundation Ethos:</strong>
+                    <p className="text-muted-foreground">
+                      This scholarship is facilitated in partnership with our Christian church ministry. Scholars are expected to participate in the fellowship and church activities powering the programme.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                disabled={confirmingAttendance}
+                onClick={() => setShowRsvpModal(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={confirmingAttendance}
+                onClick={() => void handleConfirmAttendance()}
+                className="w-full sm:w-auto bg-brand-green hover:bg-brand-green-dark text-white font-extrabold shadow-sm"
+              >
+                {confirmingAttendance ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Recording Confirmation…
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Yes, I Am Coming / Confirm My Seat
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

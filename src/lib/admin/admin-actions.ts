@@ -101,6 +101,11 @@ const getDocUrlSchema = z.object({
   storagePath: z.string().min(1),
 });
 
+const confirmAttendanceSchema = z.object({
+  accessToken: z.string().min(20),
+  applicationId: z.string().uuid(),
+});
+
 // Helper to verify user and get admin client
 async function verifyUserAndGetAdminClient(accessToken: string) {
   const { url: supabaseUrl } = getServerSupabaseConfig();
@@ -1575,4 +1580,83 @@ export const getSignedDocumentUrlServerFn = createServerFn({ method: "POST" })
 
     return { url: signed.signedUrl };
   });
+
+// 10. Confirm Resumption Attendance Server Function (Applicant Portal RSVP)
+export const confirmResumptionAttendanceServerFn = createServerFn({ method: "POST" })
+  .validator(confirmAttendanceSchema)
+  .handler(async ({ data }) => {
+    const { user, adminClient } = await verifyUserAndGetAdminClient(data.accessToken);
+
+    const { data: app, error: appErr } = await adminClient
+      .from("applications")
+      .select("id, applicant_id, status, personal")
+      .eq("id", data.applicationId)
+      .maybeSingle();
+
+    if (appErr || !app) {
+      throw new Error("Application record not found.");
+    }
+
+    if (app.applicant_id !== user.id) {
+      throw new Error("You are not authorized to confirm attendance for this application.");
+    }
+
+    const currentStatus = String(app.status).toLowerCase();
+    if (currentStatus !== "approved" && currentStatus !== "enrolled") {
+      throw new Error("Only approved scholarship candidates can confirm resumption attendance.");
+    }
+
+    const now = new Date().toISOString();
+    const existingPersonal = (app.personal as Record<string, unknown>) || {};
+    const updatedPersonal = {
+      ...existingPersonal,
+      physicalAttendanceAcknowledged: true,
+      resumptionAttendanceConfirmed: true,
+      resumptionAttendanceConfirmedAt: now,
+      resumptionTargetDate: "2027-10-15",
+    };
+
+    const { error: updateErr } = await adminClient
+      .from("applications")
+      .update({
+        personal: updatedPersonal,
+        updated_at: now,
+      })
+      .eq("id", app.id);
+
+    if (updateErr) {
+      console.error("Failed to confirm resumption attendance:", updateErr);
+      throw new Error("Failed to record attendance confirmation: " + updateErr.message);
+    }
+
+    await adminClient.from("audit_events").insert({
+      actor_id: user.id,
+      action: "application.resumption_attendance_confirmed",
+      object_type: "application",
+      outcome: "success",
+      metadata: {
+        application_id: app.id,
+        confirmed_at: now,
+        location: "Story Center, Aba",
+        resumption_date: "2027-10-15",
+      },
+    });
+
+    return { success: true, confirmedAt: now };
+  });
+
+export async function confirmApplicantAttendance(applicationId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
+
+  return await confirmResumptionAttendanceServerFn({
+    data: {
+      accessToken,
+      applicationId,
+    },
+  });
+}
+
 

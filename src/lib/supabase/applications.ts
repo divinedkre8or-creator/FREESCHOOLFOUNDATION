@@ -893,3 +893,9 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
   }
   return data.signedUrl;
 }
+
+export async function confirmApplicantAttendance(applicationId: string): Promise<{ success: boolean; confirmedAt: string }> {
+  const { confirmApplicantAttendance: confirmFn } = await import("@/lib/admin/admin-actions");
+  return await confirmFn(applicationId);
+}
+

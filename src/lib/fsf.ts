@@ -203,6 +203,9 @@ export type Application = {
     stateOfOrigin: string;
     religion?: string;
     physicalAttendanceAcknowledged?: boolean;
+    resumptionAttendanceConfirmed?: boolean;
+    resumptionAttendanceConfirmedAt?: string;
+    resumptionTargetDate?: string;
     photo?: string;
   };
   education: {

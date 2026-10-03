@@ -15,6 +15,37 @@ export const Route = createFileRoute("/admin/communications")({ component: Commu
 const AUDIENCE_UNAPPLIED = "Registered Users (Not Applied Yet)";
 const AUDIENCE_DRAFTS = "Registered Users (Draft in Progress)";
 
+const RESUMPTION_SUBJECT =
+  "Official Resumption Notice & Physical Onboarding Confirmation — The Free School Foundation";
+
+const RESUMPTION_BODY = `Dear Scholar,
+
+Following the official approval of your application for The Free School Foundation Scholarship, we are pleased to welcome you to the academic session.
+
+Please read the following important operational details carefully regarding how the programme runs:
+
+1. Physical On-Ground Resumption (Story Center, Aba):
+This programme requires full physical presence. All admitted students must relocate and be on-ground for academic and practical work at our Story Center in Aba, Abia State.
+
+2. Resumption Deadline:
+The final deadline for physical arrival and registration at the Aba Story Center is Thursday, October 15, 2027.
+
+3. Foundation & Church Partnership Ethos:
+This scholarship is fully funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar of the Foundation, all admitted students are expected to actively participate in the fellowship, values, and community activities of the church organization powering this scholarship.
+
+4. MANDATORY ACTION — Confirm Your Attendance:
+To enable us to prepare your materials, seat allocation, and reception logistics, you must indicate whether you will be coming.
+
+👉 Please log in to your scholarship portal immediately and click "Confirm Attendance / I Am Coming" to secure your spot.
+
+Portal Login Link: https://thefreeschoolfoundation.com.ng/portal
+
+If you have any logistical questions or require travel guidance to Aba, please reply directly through your portal message center or contact our support team.
+
+Warm regards,
+The Admissions & Onboarding Directorate
+The Free School Foundation`;
+
 function CommunicationsPage() {
   const { applications } = useStore();
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
@@ -68,20 +99,24 @@ function CommunicationsPage() {
 
   const handleAudienceChange = (newAudience: string) => {
     setAudience(newAudience);
-    if (newAudience === AUDIENCE_UNAPPLIED) {
-      if (!subject || subject.startsWith("Complete your") || subject.startsWith("Reminder:")) {
+    if (newAudience === "Approved" || newAudience === "Enrolled") {
+      setPriority("high");
+      setSubject(RESUMPTION_SUBJECT);
+      setBody(RESUMPTION_BODY);
+    } else if (newAudience === AUDIENCE_UNAPPLIED) {
+      if (!subject || subject.startsWith("Complete your") || subject.startsWith("Reminder:") || subject.startsWith("Official Resumption")) {
         setSubject("Complete your Free School Foundation scholarship application");
       }
-      if (!body || body.includes("registered on the scholarship portal")) {
+      if (!body || body.includes("registered on the scholarship portal") || body.includes("Story Center")) {
         setBody(
           "Hello,\n\nWe noticed you registered on the Free School Foundation scholarship portal but have not completed your application yet.\n\nScholarship applications are open and 100% free of charge. Please sign in and complete your application today to secure your opportunity.",
         );
       }
     } else if (newAudience === AUDIENCE_DRAFTS) {
-      if (!subject || subject.startsWith("Complete your") || subject.startsWith("Reminder:")) {
+      if (!subject || subject.startsWith("Complete your") || subject.startsWith("Reminder:") || subject.startsWith("Official Resumption")) {
         setSubject("Reminder: Finish and submit your scholarship application");
       }
-      if (!body || body.includes("registered on the scholarship portal") || body.includes("draft")) {
+      if (!body || body.includes("registered on the scholarship portal") || body.includes("draft") || body.includes("Story Center")) {
         setBody(
           "Hello,\n\nYour scholarship application is currently saved as a draft. Don't leave your application incomplete!\n\nPlease log in to your portal and submit all required steps today before the current campaign closes.",
         );
@@ -163,6 +198,45 @@ function CommunicationsPage() {
             </>
           )}
         </div>
+
+        {/* Quick Template Presets */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-muted-foreground">Quick Presets:</span>
+          <button
+            type="button"
+            onClick={() => handleAudienceChange("Approved")}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+              audience === "Approved"
+                ? "bg-brand-green text-white shadow-xs"
+                : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
+            }`}
+          >
+            🎓 Resumption Notice (Approved Scholars)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAudienceChange(AUDIENCE_UNAPPLIED)}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+              audience === AUDIENCE_UNAPPLIED
+                ? "bg-brand-green text-white shadow-xs"
+                : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
+            }`}
+          >
+            ✉️ Remind Unapplied Accounts
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAudienceChange(AUDIENCE_DRAFTS)}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+              audience === AUDIENCE_DRAFTS
+                ? "bg-brand-green text-white shadow-xs"
+                : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
+            }`}
+          >
+            📝 Remind Draft Applications
+          </button>
+        </div>
+
         <div className="mt-6 space-y-5">
           <label className="block text-sm font-bold">
             Audience
