@@ -531,25 +531,27 @@ INSERT INTO public.audit_events (
   actor_id,
   action,
   object_type,
+  object_id,
   outcome,
   metadata
 )
-SELECT 
-  '00000000-0000-0000-0000-000000000000'::uuid,
+VALUES (
+  auth.uid(),
   'application.pre_sept29_approvals_revoked',
   'application_batch',
+  'batch_pre_sept29_revocation',
   'success',
   jsonb_build_object(
     'cutoff_date', '2026-09-29T00:00:00Z',
     'reverted_to', 'under_review',
     'executed_at', NOW()
-  );
+  )
+);
 
 COMMIT;
 
--- 4. Immediate Verification Query (Shows remaining approved vs new under_review)
+-- 4. Immediate Result Verification
 SELECT 
   (SELECT COUNT(*) FROM public.applications WHERE status = 'approved') AS remaining_approved_count,
-  (SELECT COUNT(*) FROM public.applications WHERE status = 'under_review') AS under_review_count,
-  (SELECT COUNT(*) FROM public.applications WHERE status = 'submitted') AS submitted_count;
+  (SELECT COUNT(*) FROM public.applications WHERE status = 'under_review') AS under_review_count;
 
