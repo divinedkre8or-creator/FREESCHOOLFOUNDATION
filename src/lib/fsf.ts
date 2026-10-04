@@ -638,3 +638,35 @@ export const formatDateTime = (value?: string) =>
         minute: "2-digit",
       })
     : "—";
+
+export const RESUMPTION_SUBJECT =
+  "Official Resumption Notice & Physical Onboarding Confirmation — The Free School Foundation";
+
+export const RESUMPTION_BODY = `Dear Scholar,
+
+Following the official approval of your application for The Free School Foundation Scholarship, we are pleased to welcome you to the academic session.
+
+Please read the following important operational details carefully regarding how the programme runs:
+
+1. Physical On-Ground Resumption (Story Center, Aba):
+This programme requires full physical presence. All admitted students must relocate and be on-ground for academic and practical work at our Story Center in Aba, Abia State.
+
+2. Resumption Deadline:
+The final deadline for physical arrival and registration at the Aba Story Center is Thursday, October 15, 2027.
+
+3. Foundation & Church Partnership Ethos:
+This scholarship is fully funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar of the Foundation, all admitted students are expected to actively participate in the fellowship, values, and community activities of the church organization powering this scholarship.
+
+4. MANDATORY ACTION — Confirm Your Attendance:
+To enable us to prepare your materials, seat allocation, and reception logistics, you must indicate whether you will be coming.
+
+👉 Please log in to your scholarship portal immediately and click "Confirm Attendance / I Am Coming" to secure your spot.
+
+Portal Login Link: https://thefreeschoolfoundation.com.ng/portal
+
+If you have any logistical questions or require travel guidance to Aba, please reply directly through your portal message center or contact our support team.
+
+Warm regards,
+The Admissions & Onboarding Directorate
+The Free School Foundation`;
+

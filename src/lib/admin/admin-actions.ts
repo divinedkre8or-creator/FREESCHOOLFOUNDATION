@@ -3,8 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getServerSupabaseConfig } from "@/lib/supabase/config";
+import { RESUMPTION_SUBJECT, RESUMPTION_BODY } from "@/lib/fsf";
 import type { Application, ApplicationStatus } from "@/lib/fsf";
 import type { RegisteredUser } from "@/lib/supabase/applications";
+import { buildPlatformEmail } from "@/lib/email/templates";
 
 const deleteInputSchema = z.object({
   accessToken: z.string().min(20),
@@ -1662,5 +1664,238 @@ export async function confirmApplicantAttendance(applicationId: string) {
     },
   });
 }
+
+// 11. Dispatch Resumption Email Batch Server Function
+const dispatchResumptionEmailSchema = z.object({
+  accessToken: z.string().min(20),
+  applicationIds: z.array(z.string().uuid()).min(1).max(500),
+  customSubject: z.string().trim().max(180).optional(),
+  customBody: z.string().trim().max(5000).optional(),
+});
+
+export const dispatchResumptionEmailBatchServerFn = createServerFn({ method: "POST" })
+  .validator(dispatchResumptionEmailSchema)
+  .handler(async ({ data }) => {
+    const { userData, adminClient } = await verifyStaffAndGetClients(data.accessToken);
+
+    const { data: targetApps, error: fetchErr } = await adminClient
+      .from("applications")
+      .select("id, applicant_id, application_number, status, personal, campaign_id")
+      .in("id", data.applicationIds);
+
+    if (fetchErr || !targetApps || targetApps.length === 0) {
+      throw new Error("No applications found to dispatch: " + (fetchErr?.message || ""));
+    }
+
+    // Filter to approved or enrolled
+    const eligibleApps = targetApps.filter((a) => {
+      const st = String(a.status).toLowerCase();
+      return st === "approved" || st === "enrolled";
+    });
+
+    if (eligibleApps.length === 0) {
+      throw new Error("None of the specified applications are currently in Approved or Enrolled status.");
+    }
+
+    const batchId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const subject = data.customSubject?.trim() || RESUMPTION_SUBJECT;
+    const body = data.customBody?.trim() || RESUMPTION_BODY;
+    const campaignId = eligibleApps[0]?.campaign_id || "20000000-0000-0000-0000-000000000001";
+
+    // 1. Post official portal announcement to public.messages
+    const { data: msgRow } = await adminClient
+      .from("messages")
+      .insert({
+        campaign_id: campaignId,
+        sender_id: userData.user.id,
+        subject,
+        body,
+        channel: "portal",
+        priority: "high",
+        idempotency_key: `resumption-batch-${batchId}`,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (msgRow?.id) {
+      const recipientRows = eligibleApps.map((a) => ({
+        message_id: msgRow.id,
+        applicant_id: a.applicant_id,
+        application_id: a.id,
+        delivery_status: "delivered",
+        read_at: null,
+      }));
+
+      await adminClient
+        .from("message_recipients")
+        .upsert(recipientRows, { onConflict: "message_id,applicant_id" });
+    }
+
+    // 2. Dispatch batch emails via Resend Pro
+    const rawResendKey =
+      process.env["RESEND_API_KEY"] ||
+      process.env["VITE_RESEND_API_KEY"] ||
+      // @ts-ignore
+      (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.RESEND_API_KEY || import.meta.env.VITE_RESEND_API_KEY) : undefined) ||
+      "";
+    const resendKey = String(rawResendKey).replace(/^["']|["']$/g, "").trim();
+
+    const rawFrom =
+      process.env["RESEND_FROM_EMAIL"] ||
+      process.env["VITE_RESEND_FROM_EMAIL"] ||
+      // @ts-ignore
+      (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.RESEND_FROM_EMAIL || import.meta.env.VITE_RESEND_FROM_EMAIL) : undefined) ||
+      "";
+    const from =
+      String(rawFrom).replace(/^["']|["']$/g, "").trim() ||
+      "The Free School Foundation <notifications@updates.thefreeschoolfoundation.com.ng>";
+
+    const rawReplyTo =
+      process.env["RESEND_REPLY_TO"] ||
+      process.env["VITE_RESEND_REPLY_TO"] ||
+      // @ts-ignore
+      (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.RESEND_REPLY_TO || import.meta.env.VITE_RESEND_REPLY_TO) : undefined) ||
+      "";
+    const replyTo =
+      String(rawReplyTo).replace(/^["']|["']$/g, "").trim() ||
+      "info@thefreeschoolfoundation.com.ng";
+
+    const rawBaseUrl =
+      process.env["APP_BASE_URL"] ||
+      process.env["VITE_APP_BASE_URL"] ||
+      // @ts-ignore
+      (typeof import.meta !== "undefined" && import.meta.env ? (import.meta.env.APP_BASE_URL || import.meta.env.VITE_APP_BASE_URL) : undefined) ||
+      "";
+    const appBaseUrl =
+      String(rawBaseUrl).replace(/^["']|["']$/g, "").trim() ||
+      "https://thefreeschoolfoundation.com.ng";
+
+    const portalUrl = `${appBaseUrl.replace(/\/$/, "")}/portal`;
+    const actionUrl = `${portalUrl}?section=overview`;
+    const actionText = "Confirm Resumption Attendance";
+
+    let emailDeliveredCount = 0;
+
+    if (resendKey) {
+      const emailPayloads = eligibleApps
+        .map((app) => {
+          const personal = (app.personal as Record<string, unknown>) || {};
+          const to = String(personal["email"] || "").trim().toLowerCase();
+          const firstName = String(personal["firstName"] || "").trim();
+
+          const content = buildPlatformEmail({
+            event: "message",
+            firstName,
+            applicationNumber: app.application_number || undefined,
+            subject,
+            body,
+            portalUrl,
+            actionUrl,
+            actionText,
+          });
+
+          return {
+            from,
+            to: [to],
+            ...(replyTo ? { reply_to: replyTo } : {}),
+            subject: content.subject,
+            html: content.html,
+            text: content.text,
+            tags: [
+              { name: "category", value: "resumption_cohort_dispatch" },
+              { name: "batch_id", value: batchId },
+            ],
+          };
+        })
+        .filter((e) => z.string().email().safeParse(e.to[0]).success);
+
+      // Process in chunks of 100 for Resend Batch API
+      for (let i = 0; i < emailPayloads.length; i += 100) {
+        const chunk = emailPayloads.slice(i, i + 100);
+        try {
+          const res = await fetch("https://api.resend.com/emails/batch", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendKey}`,
+              "Content-Type": "application/json",
+              "Idempotency-Key": `fsf-resumption-${batchId}-${i}`,
+            },
+            body: JSON.stringify(chunk),
+          });
+
+          if (res.ok) {
+            emailDeliveredCount += chunk.length;
+          } else {
+            const errBody = await res.text().catch(() => "");
+            console.error("[dispatchResumptionEmail] Resend delivery error:", res.status, errBody);
+          }
+        } catch (fetchErr) {
+          console.error("[dispatchResumptionEmail] Resend fetch exception:", fetchErr);
+        }
+      }
+    }
+
+    // 3. Mark all eligible applications as resumptionEmailSent = true
+    for (const app of eligibleApps) {
+      const existingPersonal = (app.personal as Record<string, unknown>) || {};
+      const updatedPersonal = {
+        ...existingPersonal,
+        resumptionEmailSent: true,
+        resumptionEmailSentAt: now,
+        resumptionEmailBatchId: batchId,
+      };
+
+      await adminClient
+        .from("applications")
+        .update({
+          personal: updatedPersonal,
+          updated_at: now,
+        })
+        .eq("id", app.id);
+    }
+
+    // 4. Record audit event
+    await adminClient.from("audit_events").insert({
+      actor_id: userData.user.id,
+      action: "application.resumption_batch_dispatched",
+      object_type: "application_batch",
+      outcome: "success",
+      metadata: {
+        batch_id: batchId,
+        dispatched_count: eligibleApps.length,
+        email_delivered_count: emailDeliveredCount,
+        application_ids: eligibleApps.map((a) => a.id),
+      },
+    });
+
+    return {
+      success: true,
+      count: eligibleApps.length,
+      emailDeliveredCount,
+      batchId,
+    };
+  });
+
+export async function dispatchResumptionEmailBatch(input: {
+  applicationIds: string[];
+  customSubject?: string;
+  customBody?: string;
+}) {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
+
+  return await dispatchResumptionEmailBatchServerFn({
+    data: {
+      accessToken,
+      applicationIds: input.applicationIds,
+      customSubject: input.customSubject,
+      customBody: input.customBody,
+    },
+  });
+}
+
 
 

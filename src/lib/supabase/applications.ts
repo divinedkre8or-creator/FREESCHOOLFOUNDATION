@@ -912,3 +912,13 @@ export async function confirmApplicantAttendance(applicationId: string): Promise
   return await confirmFn(applicationId);
 }
 
+export async function dispatchResumptionEmailBatch(input: {
+  applicationIds: string[];
+  customSubject?: string;
+  customBody?: string;
+}): Promise<{ success: boolean; count: number; emailDeliveredCount: number; batchId: string }> {
+  const { dispatchResumptionEmailBatch: dispatchFn } = await import("@/lib/admin/admin-actions");
+  return await dispatchFn(input);
+}
+
+
