@@ -6,8 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUSES } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
-import { loadRegisteredUsers, sendPortalMessage } from "@/lib/supabase/applications";
-import type { RegisteredUser } from "@/lib/supabase/applications";
+import {
+  loadAdminApplications,
+  loadRegisteredUsers,
+  sendPortalMessage,
+  type RegisteredUser,
+} from "@/lib/supabase/applications";
 import { sendPlatformEmail, sendRegisteredUsersEmail } from "@/lib/email/platform-email";
 
 export const Route = createFileRoute("/admin/communications")({ component: CommunicationsPage });
@@ -47,29 +51,40 @@ The Admissions & Onboarding Directorate
 The Free School Foundation`;
 
 function CommunicationsPage() {
-  const { applications } = useStore();
+  const { setState } = useStore();
+  const [liveApplications, setLiveApplications] = useState<import("@/lib/fsf").Application[]>([]);
+  const [loadingApps, setLoadingApps] = useState(true);
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
-  const [audience, setAudience] = useState("All applicants");
-  const [priority, setPriority] = useState<"normal" | "high">("normal");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [audience, setAudience] = useState("Approved");
+  const [priority, setPriority] = useState<"normal" | "high">("high");
+  const [subject, setSubject] = useState(RESUMPTION_SUBJECT);
+  const [body, setBody] = useState(RESUMPTION_BODY);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
-    void loadRegisteredUsers()
-      .then((users) => {
+    void Promise.allSettled([
+      loadAdminApplications().then((apps) => {
+        if (active) {
+          setLiveApplications(apps);
+          setState((prev) => ({ ...prev, applications: apps }));
+          setLoadingApps(false);
+        }
+      }),
+      loadRegisteredUsers().then((users) => {
         if (active) setRegisteredUsers(users);
-      })
-      .catch((err) => {
-        console.error("Failed to load registered users for communications:", err);
-      });
+      }),
+    ]).catch((err) => {
+      console.error("Failed to load communications audience:", err);
+      if (active) setLoadingApps(false);
+    });
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [setState]);
 
   const isRegisteredAudience = audience === AUDIENCE_UNAPPLIED || audience === AUDIENCE_DRAFTS;
 
@@ -88,9 +103,9 @@ function CommunicationsPage() {
   const applicantRecipients = useMemo(
     () =>
       audience === "All applicants"
-        ? applications.filter((app) => app.status !== "Draft")
-        : applications.filter((app) => app.status === audience),
-    [applications, audience],
+        ? liveApplications.filter((app) => app.status !== "Draft")
+        : liveApplications.filter((app) => app.status === audience),
+    [liveApplications, audience],
   );
 
   const recipientCount = isRegisteredAudience

@@ -555,3 +555,222 @@ SELECT
   (SELECT COUNT(*) FROM public.applications WHERE status = 'approved') AS remaining_approved_count,
   (SELECT COUNT(*) FROM public.applications WHERE status = 'under_review') AS under_review_count;
 
+
+-- ==============================================================================
+-- SECTION 8: OFFICIAL RESUMPTION NOTICE ACTIVATION & DISPATCH
+-- RUN THIS BLOCK IN SUPABASE SQL EDITOR TO IMMEDIATELY ACTIVATE THE RESUMPTION
+-- MESSAGE IN THE DATABASE AND DELIVER IT TO ALL APPROVED SCHOLARS & ADMIN PORTAL
+-- ==============================================================================
+
+BEGIN;
+
+-- 1. Ensure 'priority' column exists on public.messages
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS priority text DEFAULT 'normal';
+
+-- 2. Ensure Divine's Founder / Admin Test Account is set to 'approved' so the portal immediately reflects full approved status
+UPDATE public.applications 
+SET 
+  status = 'approved',
+  updated_at = NOW()
+WHERE application_number = 'FSF-2026-000001' 
+   OR personal->>'email' = 'officialnwachukwudivine@gmail.com';
+
+-- 3. Record status change history for the test application
+INSERT INTO public.application_status_history (
+  application_id,
+  from_status,
+  to_status,
+  changed_by,
+  applicant_message,
+  created_at
+)
+SELECT 
+  id,
+  'under_review',
+  'approved',
+  COALESCE(auth.uid(), applicant_id),
+  'Congratulations! Your scholarship application has been officially approved.',
+  NOW()
+FROM public.applications
+WHERE application_number = 'FSF-2026-000001' OR personal->>'email' = 'officialnwachukwudivine@gmail.com'
+LIMIT 1;
+
+-- 4. Insert or Update the Official Resumption Notice Message in public.messages
+INSERT INTO public.messages (
+  id,
+  campaign_id,
+  sender_id,
+  subject,
+  body,
+  channel,
+  priority,
+  idempotency_key,
+  created_at
+)
+VALUES (
+  '77777777-7777-7777-7777-777777770001',
+  '20000000-0000-0000-0000-000000000001',
+  (SELECT user_id FROM public.staff_profiles ORDER BY created_at ASC LIMIT 1),
+  'Official Resumption Notice & Physical Onboarding Confirmation — The Free School Foundation',
+  'Dear Scholar,
+
+Following the official approval of your application for The Free School Foundation Scholarship, we are pleased to welcome you to the academic session.
+
+Please read the following important operational details carefully regarding how the programme runs:
+
+1. Physical On-Ground Resumption (Story Center, Aba):
+This programme requires full physical presence. All admitted students must relocate and be on-ground for academic and practical work at our Story Center in Aba, Abia State.
+
+2. Resumption Deadline:
+The final deadline for physical arrival and registration at the Aba Story Center is Thursday, October 15, 2027.
+
+3. Foundation & Church Partnership Ethos:
+This scholarship is fully funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar of the Foundation, all admitted students are expected to actively participate in the fellowship, values, and community activities of the church organization powering this scholarship.
+
+4. MANDATORY ACTION — Confirm Your Attendance:
+To enable us to prepare your materials, seat allocation, and reception logistics, you must indicate whether you will be coming.
+
+👉 Please log in to your scholarship portal immediately and click "Confirm Attendance / I Am Coming" to secure your spot.
+
+Portal Login Link: https://thefreeschoolfoundation.com.ng/portal
+
+If you have any logistical questions or require travel guidance to Aba, please reply directly through your portal message center or contact our support team.
+
+Warm regards,
+The Admissions & Onboarding Directorate
+The Free School Foundation',
+  'portal',
+  'high',
+  'official_resumption_notice_oct2027_v1',
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  subject = EXCLUDED.subject,
+  body = EXCLUDED.body,
+  priority = 'high',
+  channel = 'portal';
+
+-- 5. Dispatch / Link to ALL Approved & Enrolled Applicants in public.message_recipients
+INSERT INTO public.message_recipients (
+  message_id,
+  applicant_id,
+  application_id,
+  delivery_status,
+  read_at,
+  updated_at
+)
+SELECT 
+  '77777777-7777-7777-7777-777777770001'::uuid,
+  a.applicant_id,
+  a.id,
+  'delivered',
+  NULL,
+  NOW()
+FROM public.applications a
+WHERE a.status IN ('approved', 'enrolled')
+   OR a.application_number = 'FSF-2026-000001'
+   OR a.personal->>'email' = 'officialnwachukwudivine@gmail.com'
+ON CONFLICT (message_id, applicant_id) DO UPDATE SET
+  delivery_status = 'delivered',
+  read_at = NULL;
+
+-- 6. Create RPC function public.send_portal_message for seamless Admin Dashboard UI dispatches
+CREATE OR REPLACE FUNCTION public.send_portal_message(
+  target_application_ids uuid[],
+  message_subject text,
+  message_body text,
+  message_priority text DEFAULT 'normal'
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_campaign_id uuid := '20000000-0000-0000-0000-000000000001';
+  v_sender_id uuid := auth.uid();
+  v_message_id uuid;
+  v_count integer := 0;
+BEGIN
+  IF v_sender_id IS NULL THEN
+    SELECT user_id INTO v_sender_id FROM public.staff_profiles ORDER BY created_at ASC LIMIT 1;
+  END IF;
+
+  INSERT INTO public.messages (
+    campaign_id,
+    sender_id,
+    subject,
+    body,
+    channel,
+    priority,
+    idempotency_key
+  )
+  VALUES (
+    v_campaign_id,
+    v_sender_id,
+    message_subject,
+    message_body,
+    'portal',
+    message_priority,
+    v_sender_id::text || ':' || gen_random_uuid()::text
+  )
+  RETURNING id INTO v_message_id;
+
+  INSERT INTO public.message_recipients (
+    message_id,
+    applicant_id,
+    application_id,
+    delivery_status
+  )
+  SELECT 
+    v_message_id,
+    a.applicant_id,
+    a.id,
+    'delivered'
+  FROM public.applications a
+  WHERE a.id = ANY(target_application_ids)
+  ON CONFLICT (message_id, applicant_id) DO NOTHING;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.send_portal_message TO authenticated, anon, service_role;
+
+-- 7. Audit log for message activation
+INSERT INTO public.audit_events (
+  actor_id,
+  action,
+  object_type,
+  object_id,
+  outcome,
+  metadata
+)
+VALUES (
+  COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid),
+  'communications.resumption_message_activated',
+  'message',
+  '77777777-7777-7777-7777-777777770001',
+  'success',
+  jsonb_build_object(
+    'target_date', '2027-10-15',
+    'location', 'Story Center, Aba',
+    'activated_at', NOW()
+  )
+);
+
+COMMIT;
+
+-- 8. Verification queries
+SELECT 
+  m.id AS message_id,
+  m.subject,
+  m.priority,
+  m.channel,
+  COUNT(r.applicant_id) AS total_recipients_delivered
+FROM public.messages m
+JOIN public.message_recipients r ON r.message_id = m.id
+WHERE m.id = '77777777-7777-7777-7777-777777770001'
+GROUP BY m.id, m.subject, m.priority, m.channel;
+
+

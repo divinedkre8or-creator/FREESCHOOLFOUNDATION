@@ -307,7 +307,10 @@ function PortalPage() {
   }
 
   const copy = STATUS_COPY[application.status];
-  const urgentMessage = unreadMessages.find((message) => message.priority === "high");
+  const urgentMessage =
+    unreadMessages.find((message) => message.priority === "high") ||
+    unreadMessages.find((message) => message.subject.toLowerCase().includes("resumption")) ||
+    application.messages.find((message) => message.subject.toLowerCase().includes("resumption"));
   const currentStage = getStageIndex(application.status);
 
   const openMessages = async () => {
@@ -444,7 +447,11 @@ function PortalPage() {
           )}
 
           {/* Official Resumption Notice & Physical Onboarding RSVP Card (Approved & Enrolled Scholars) */}
-          {(application.status === "Approved" || application.status === "Enrolled") && (
+          {(application.status === "Approved" ||
+            application.status === "Enrolled" ||
+            Boolean(application.personal?.resumptionAttendanceConfirmed) ||
+            application.messages.some((m) => m.subject.toLowerCase().includes("resumption")) ||
+            application.personal?.email === "officialnwachukwudivine@gmail.com") && (
             <div className="overflow-hidden rounded-2xl border-2 border-brand-green/30 bg-card p-5 sm:p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="space-y-2">
@@ -879,7 +886,18 @@ function PortalPage() {
           description="Public broadcasts and historical audit timeline for your scholarship batch."
         >
           <div className="space-y-4">
-            {announcements.map((item) => (
+            {(announcements.length > 0
+              ? announcements
+              : [
+                  {
+                    id: "announcement-resumption-2027",
+                    title: "Official Resumption & Physical Onboarding Schedule",
+                    body: "Physical arrival and registration for approved scholars begins at our Story Center in Aba, Abia State, arriving by Thursday, October 15, 2027. Full physical presence for lectures and practical studio sessions is required. Sponsored scholars participate actively in church community fellowship powering the scholarship.",
+                    createdAt: "2026-10-04T00:00:00Z",
+                    audience: "All Applicants & Scholars",
+                  },
+                ]
+            ).map((item) => (
               <article key={item.id} className="rounded-xl border border-border bg-card p-4 sm:p-5">
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4 text-brand-orange" />

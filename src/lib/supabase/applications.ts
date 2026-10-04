@@ -844,7 +844,9 @@ function mapApplication(data: ApplicationRow): Application {
         sentAt: recipient.messages!.created_at,
         channel: "Portal" as const,
         read: Boolean(recipient.read_at),
-        priority: recipient.messages?.priority ?? "normal",
+        priority:
+          (recipient.messages?.priority as "normal" | "high") ||
+          (recipient.messages?.subject?.toLowerCase().includes("resumption") ? "high" : "normal"),
       }))
       .sort((a, b) => b.sentAt.localeCompare(a.sentAt)),
     notes: notes
