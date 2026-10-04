@@ -165,6 +165,9 @@ function ApplicantsPage() {
   const [status, setStatus] = useState("All");
   const [level, setLevel] = useState("All");
   const [programme, setProgramme] = useState("All");
+  const [resumptionMailFilter, setResumptionMailFilter] = useState<
+    "All" | "Pending Notice" | "Notice Delivered"
+  >("All");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [phoneTargetCategory, setPhoneTargetCategory] = useState<
@@ -266,6 +269,16 @@ function ApplicantsPage() {
             (a.status === "Approved" || a.status === "Enrolled") &&
             !a.personal?.resumptionAttendanceConfirmed,
         ).length,
+        pendingResumptionNoticeCount: applications.filter(
+          (a) =>
+            (a.status === "Approved" || a.status === "Enrolled") &&
+            !a.personal?.resumptionEmailSent,
+        ).length,
+        deliveredResumptionNoticeCount: applications.filter(
+          (a) =>
+            (a.status === "Approved" || a.status === "Enrolled") &&
+            Boolean(a.personal?.resumptionEmailSent),
+        ).length,
       };
     }
     // Fallback to local computation if RPC metrics are unavailable
@@ -295,6 +308,16 @@ function ApplicantsPage() {
           (a.status === "Approved" || a.status === "Enrolled") &&
           !a.personal?.resumptionAttendanceConfirmed,
       ).length,
+      pendingResumptionNoticeCount: applications.filter(
+        (a) =>
+          (a.status === "Approved" || a.status === "Enrolled") &&
+          !a.personal?.resumptionEmailSent,
+      ).length,
+      deliveredResumptionNoticeCount: applications.filter(
+        (a) =>
+          (a.status === "Approved" || a.status === "Enrolled") &&
+          Boolean(a.personal?.resumptionEmailSent),
+      ).length,
     };
   }, [applications, registeredUsers, dashboardMetrics]);
 
@@ -303,14 +326,24 @@ function ApplicantsPage() {
       applications.filter((app) => {
         const haystack =
           `${fullName(app)} ${app.appNumber} ${app.personal.phone} ${app.personal.email}`.toLowerCase();
+        const matchesResumption =
+          resumptionMailFilter === "All"
+            ? true
+            : resumptionMailFilter === "Pending Notice"
+              ? (app.status === "Approved" || app.status === "Enrolled") &&
+                !app.personal?.resumptionEmailSent
+              : (app.status === "Approved" || app.status === "Enrolled") &&
+                Boolean(app.personal?.resumptionEmailSent);
+
         return (
           haystack.includes(query.toLowerCase()) &&
           (status === "All" || app.status === status) &&
           (level === "All" || app.level === level) &&
-          (programme === "All" || app.programme === programme)
+          (programme === "All" || app.programme === programme) &&
+          matchesResumption
         );
       }),
-    [applications, query, status, level, programme],
+    [applications, query, status, level, programme, resumptionMailFilter],
   );
   const selected = filtered.filter((app) => selectedIds.includes(app.id));
   const exportRows = selected.length > 0 ? selected : filtered;
@@ -318,7 +351,7 @@ function ApplicantsPage() {
   // Auto-reset page when application filters or search changes
   useEffect(() => {
     setAppPage(1);
-  }, [query, status, level, programme]);
+  }, [query, status, level, programme, resumptionMailFilter]);
 
   const paginatedApplications = useMemo(() => {
     if (appPageSize === "all") return filtered;
@@ -1119,7 +1152,7 @@ function ApplicantsPage() {
       {activeTab === "applications" ? (
         <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
           {/* Search & Filters */}
-          <div className="grid gap-3 border-b border-border p-4 lg:grid-cols-[minmax(220px,1fr)_repeat(3,180px)]">
+          <div className="grid gap-3 border-b border-border p-4 lg:grid-cols-[minmax(200px,1fr)_repeat(4,165px)]">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -1146,6 +1179,12 @@ function ApplicantsPage() {
               onChange={setProgramme}
               options={["All", ...PROGRAMMES]}
               label="programme"
+            />
+            <FilterSelect
+              value={resumptionMailFilter}
+              onChange={(val) => setResumptionMailFilter(val as typeof resumptionMailFilter)}
+              options={["All", "Pending Notice", "Notice Delivered"]}
+              label="resumption notice"
             />
           </div>
 
@@ -1241,13 +1280,23 @@ function ApplicantsPage() {
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <StatusBadge status={app.status} />
+                        {(app.status === "Approved" || app.status === "Enrolled") &&
+                          (app.personal?.resumptionEmailSent ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-brand-green/20 bg-brand-green/10 px-2 py-0.5 text-[10px] font-bold text-brand-green-dark">
+                              <Mail className="h-2.5 w-2.5" /> Notice Sent
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                              <Clock className="h-2.5 w-2.5" /> Notice Pending
+                            </span>
+                          ))}
                         {app.personal?.resumptionAttendanceConfirmed ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
                             <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Attending Aba
                           </span>
-                        ) : (app.status === "Approved" || app.status === "Enrolled") ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-                            <Clock className="h-2.5 w-2.5 text-amber-600" /> Pending RSVP
+                        ) : app.status === "Approved" || app.status === "Enrolled" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            Pending RSVP
                           </span>
                         ) : null}
                       </div>
@@ -1364,15 +1413,29 @@ function ApplicantsPage() {
                         </td>
                         <td className="px-5 py-4">
                           <StatusBadge status={app.status} />
-                          {app.personal?.resumptionAttendanceConfirmed ? (
-                            <span className="mt-1 flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 w-fit">
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Attending Aba
-                            </span>
-                          ) : (app.status === "Approved" || app.status === "Enrolled") ? (
-                            <span className="mt-1 flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 w-fit">
-                              <Clock className="h-3 w-3 text-amber-600" /> Pending RSVP
-                            </span>
-                          ) : null}
+                          {(app.status === "Approved" || app.status === "Enrolled") && (
+                            <div className="mt-1 flex flex-col gap-1 w-fit">
+                              {app.personal?.resumptionEmailSent ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-brand-green/20 bg-brand-green/10 px-2 py-0.5 text-[10px] font-bold text-brand-green-dark">
+                                  <Mail className="h-2.5 w-2.5" /> Notice Sent
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                  <Clock className="h-2.5 w-2.5" /> Notice Pending
+                                </span>
+                              )}
+
+                              {app.personal?.resumptionAttendanceConfirmed ? (
+                                <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                  <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Attending Aba
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 rounded-full bg-secondary/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  Pending RSVP
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">
