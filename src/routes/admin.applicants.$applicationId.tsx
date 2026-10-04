@@ -13,6 +13,7 @@ import {
   Eye,
   FileCheck2,
   FileText,
+  GraduationCap,
   LoaderCircle,
   Mail,
   MessageSquare,
@@ -21,6 +22,7 @@ import {
   Printer,
   RotateCcw,
   Save,
+  Send,
   ShieldAlert,
   ShieldCheck,
   Square,
@@ -49,6 +51,7 @@ import { sendPlatformEmail } from "@/lib/email/platform-email";
 import {
   addApplicationNote,
   changeApplicationStatus,
+  dispatchResumptionEmailBatch,
   getDocumentUrl,
   loadAdminApplications,
   requestApplicationDocument,
@@ -98,6 +101,9 @@ function ApplicantProfile() {
   const [feedback, setFeedback] = useState("");
   const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   const [updatingDocId, setUpdatingDocId] = useState<string | null>(null);
+  const [autoSendResumptionMail, setAutoSendResumptionMail] = useState(true);
+  const [dispatchingResumption, setDispatchingResumption] = useState(false);
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
 
   // Sync state if application loads after initial render
   useEffect(() => {
@@ -157,6 +163,34 @@ function ApplicantProfile() {
       setFeedback(error instanceof Error ? error.message : "The action could not be completed.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDispatchResumptionNotice = async (isResend = false) => {
+    if (!application) return;
+    setDispatchingResumption(true);
+    setFeedback("");
+    try {
+      const res = await dispatchResumptionEmailBatch({
+        applicationIds: [application.id],
+      });
+      await refresh();
+      if (res.emailDeliveredCount === 0) {
+        setFeedback(
+          "Resumption notice registered in portal, but email delivery had issues. Please verify Resend configuration.",
+        );
+      } else {
+        setFeedback(
+          isResend
+            ? `Resumption notice successfully re-sent to ${fullName(application)} (${application.personal.email}).`
+            : `Official resumption notice dispatched to ${fullName(application)} (${application.personal.email}).`,
+        );
+      }
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Failed to dispatch resumption notice.");
+    } finally {
+      setDispatchingResumption(false);
+      setResendDialogOpen(false);
     }
   };
 
@@ -384,9 +418,21 @@ function ApplicantProfile() {
               </div>
             </div>
 
-            <div className="sm:text-right">
-              <StatusBadge status={application.status} />
-              <p className="mt-2 text-xs font-bold text-foreground">
+            <div className="sm:text-right space-y-2">
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <StatusBadge status={application.status} />
+                {(application.status === "Approved" || application.status === "Enrolled") &&
+                  (application.personal?.resumptionEmailSent ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-brand-green/20 bg-brand-green/10 px-2.5 py-0.5 text-[11px] font-bold text-brand-green-dark">
+                      <CheckCircle2 className="h-3 w-3" /> Resumption Notice Sent
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
+                      <Clock className="h-3 w-3" /> Resumption Notice Pending
+                    </span>
+                  ))}
+              </div>
+              <p className="text-xs font-bold text-foreground">
                 {application.programme} ({application.level})
               </p>
             </div>
@@ -869,12 +915,35 @@ function ApplicantProfile() {
               </p>
             </div>
 
+            {/* Auto-send Resumption Notice Toggle when Approved is selected */}
+            {status === "Approved" && (
+              <div className="mt-3 rounded-xl border border-brand-green/30 bg-brand-green-soft/40 p-3 text-xs">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoSendResumptionMail}
+                    onChange={(e) => setAutoSendResumptionMail(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border text-brand-green focus:ring-brand-green"
+                  />
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-foreground">
+                      Auto-dispatch Resumption Notice on Save
+                    </span>
+                    <p className="text-[11px] text-muted-foreground leading-normal">
+                      Sends official reporting timetable, venue requirements, and portal confirmation link to {application.personal.email}.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
             <Button
               className="mt-4 w-full font-bold"
               disabled={saving || (status === application.status && !statusMessage.trim())}
               onClick={() =>
                 void runAction(async () => {
                   await changeApplicationStatus(application.id, status, statusMessage || undefined);
+                  let emailWarning = "";
                   try {
                     await sendPlatformEmail({
                       applicationIds: [application.id],
@@ -882,14 +951,27 @@ function ApplicantProfile() {
                       ...(statusMessage ? { body: statusMessage } : {}),
                     });
                   } catch (err) {
-                    setStatusMessage("");
                     console.error("Status email dispatch error:", err);
-                    return "Status updated, but email notification failed. Retry from Communications.";
+                    emailWarning = "Status updated, but email notification failed.";
                   }
+
+                  if (status === "Approved" && autoSendResumptionMail) {
+                    try {
+                      await dispatchResumptionEmailBatch({
+                        applicationIds: [application.id],
+                      });
+                    } catch (err) {
+                      console.error("Auto resumption dispatch error:", err);
+                      return "Application approved, but automated resumption email dispatch failed. You can dispatch it manually from the Resumption Notice card below.";
+                    }
+                  }
+
                   setStatusMessage("");
                   toggleCheck("decision");
-                  return undefined;
-                }, "Application status updated and synced.")
+                  return emailWarning || undefined;
+                }, status === "Approved" && autoSendResumptionMail
+                  ? "Application approved and official resumption notice dispatched!"
+                  : "Application status updated and synced.")
               }
             >
               {saving ? (
@@ -900,6 +982,87 @@ function ApplicantProfile() {
               Save Review Decision
             </Button>
           </section>
+
+          {/* Official Resumption Notice Card for Approved/Enrolled candidates */}
+          {(application.status === "Approved" || application.status === "Enrolled") && (
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-foreground">
+                  <GraduationCap className="h-4 w-4 text-brand-green" /> Resumption Notice
+                </div>
+                {application.personal?.resumptionEmailSent ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-green/10 px-2.5 py-0.5 text-[11px] font-bold text-brand-green-dark border border-brand-green/20">
+                    <CheckCircle2 className="h-3 w-3" /> Delivered
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-500/20">
+                    <Clock className="h-3 w-3" /> Awaiting Notice
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 rounded-xl border border-border bg-secondary/30 p-3.5 text-xs space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Notice Status:</span>
+                  <span className="font-bold text-foreground">
+                    {application.personal?.resumptionEmailSent ? "Delivered to Candidate" : "Pending Dispatch"}
+                  </span>
+                </div>
+                {application.personal?.resumptionEmailSentAt && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">Dispatched At:</span>
+                    <span className="font-semibold text-foreground">
+                      {formatDateTime(application.personal.resumptionEmailSentAt)}
+                    </span>
+                  </div>
+                )}
+                {application.personal?.resumptionAttendanceConfirmed && (
+                  <div className="flex items-center justify-between text-[11px] text-brand-green-dark font-bold pt-1 border-t border-border/50">
+                    <span>Attendance RSVP:</span>
+                    <span>Confirmed by Candidate</span>
+                  </div>
+                )}
+              </div>
+
+              {application.personal?.resumptionEmailSent ? (
+                <div className="mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs font-bold gap-1.5"
+                    disabled={dispatchingResumption}
+                    onClick={() => setResendDialogOpen(true)}
+                  >
+                    {dispatchingResumption ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    )}
+                    Resend Resumption Notice
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <Button
+                    size="sm"
+                    className="w-full text-xs font-bold gap-1.5 bg-brand-green hover:bg-brand-green/90 text-white"
+                    disabled={dispatchingResumption}
+                    onClick={() => void handleDispatchResumptionNotice(false)}
+                  >
+                    {dispatchingResumption ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Send Resumption Notice & Confirmation
+                  </Button>
+                  <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+                    Sends timetable, requirements, and marks batch block as delivered.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Private Internal Notes Box */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
@@ -1050,6 +1213,44 @@ function ApplicantProfile() {
           )}
         </aside>
       </div>
+
+      {/* Resend Resumption Notice Confirmation Dialog */}
+      <AlertDialog open={resendDialogOpen} onOpenChange={setResendDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-brand-orange" /> Resend Resumption Notice?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-left">
+              <p>
+                This will re-dispatch the official resumption guidelines and timetable email to{" "}
+                <strong>{fullName(application)}</strong> at{" "}
+                <strong>{application.personal.email}</strong>.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Last dispatched:{" "}
+                {application.personal?.resumptionEmailSentAt
+                  ? formatDateTime(application.personal.resumptionEmailSentAt)
+                  : "Previously recorded"}
+                .
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={dispatchingResumption}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={dispatchingResumption}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDispatchResumptionNotice(true);
+              }}
+              className="bg-brand-green hover:bg-brand-green/90 text-white"
+            >
+              {dispatchingResumption ? "Dispatching…" : "Confirm Resend"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
