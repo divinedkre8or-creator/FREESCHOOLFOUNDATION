@@ -747,7 +747,7 @@ INSERT INTO public.audit_events (
   metadata
 )
 VALUES (
-  COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid),
+  COALESCE(auth.uid(), (SELECT user_id FROM public.staff_profiles ORDER BY created_at ASC LIMIT 1)),
   'communications.resumption_message_activated',
   'message',
   '77777777-7777-7777-7777-777777770001',
