@@ -66,13 +66,13 @@ import {
 
 export const Route = createFileRoute("/admin/applicants/$applicationId")({
   component: ApplicantProfile,
-  errorComponent: ({ error, reset }) => (
+  errorComponent: ({ error, reset }: { error: any; reset: () => void }) => (
     <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center space-y-4 max-w-xl mx-auto my-12">
       <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-2">
         <AlertTriangle className="h-6 w-6" />
       </div>
       <h2 className="text-xl font-bold text-foreground">Unable to load applicant dossier</h2>
-      <p className="text-sm text-muted-foreground">{error?.message || "An unexpected error occurred while rendering this applicant's profile."}</p>
+      <p className="text-sm text-muted-foreground">{error?.message || String(error) || "An unexpected error occurred while rendering this applicant's profile."}</p>
       <div className="flex justify-center gap-3 pt-2">
         <Button variant="outline" size="sm" onClick={() => reset()}>
           Retry Loading
