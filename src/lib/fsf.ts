@@ -208,6 +208,9 @@ export type Application = {
     resumptionAttendanceConfirmed?: boolean;
     resumptionAttendanceConfirmedAt?: string;
     resumptionTargetDate?: string;
+    resumptionEmailSent?: boolean;
+    resumptionEmailSentAt?: string;
+    resumptionEmailBatchId?: string;
     photo?: string;
   };
   education: {

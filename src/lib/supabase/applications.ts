@@ -806,6 +806,17 @@ function mapApplication(data: ApplicationRow): Application {
   const history = (data.application_status_history ?? []) as Array<Record<string, unknown>>;
   const notes = (data.internal_notes ?? []) as Array<Record<string, unknown>>;
   const messageRecipients = data.message_recipients ?? [];
+  const hasResumptionMessage = messageRecipients.some((r) =>
+    r.messages?.subject?.toLowerCase().includes("resumption"),
+  );
+
+  const mappedPersonal: Application["personal"] = {
+    ...personal,
+    resumptionEmailSent: Boolean(personal?.resumptionEmailSent || hasResumptionMessage),
+    ...(hasResumptionMessage && !personal?.resumptionEmailSentAt
+      ? { resumptionEmailSentAt: data.submitted_at || data.created_at }
+      : {}),
+  };
 
   return {
     id: data.id,
@@ -816,7 +827,7 @@ function mapApplication(data: ApplicationRow): Application {
     campaign: "Citi Polytechnic ODL Scholarship 2026",
     level: "ND",
     programme: (programmeRelation?.name ?? "Computer Science") as Application["programme"],
-    personal,
+    personal: mappedPersonal,
     education,
     scholarship,
     documents: documents.map((document) => ({
