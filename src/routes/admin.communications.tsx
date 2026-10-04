@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -45,8 +45,8 @@ export const Route = createFileRoute("/admin/communications")({ component: Commu
 
 const AUDIENCE_UNAPPLIED = "Registered Users (Not Applied Yet)";
 const AUDIENCE_DRAFTS = "Registered Users (Draft in Progress)";
-const AUDIENCE_PENDING_RESUMPTION = "Approved (Awaiting Resumption Notice)";
-const AUDIENCE_DELIVERED_RESUMPTION = "Approved (Resumption Notice Delivered)";
+const AUDIENCE_PENDING_RESUMPTION = "Approved (Awaiting Resumption Mail)";
+const AUDIENCE_DELIVERED_RESUMPTION = "Sent Resumption Mail (Delivered)";
 
 function CommunicationsPage() {
   const { setState } = useStore();
@@ -69,6 +69,7 @@ function CommunicationsPage() {
     text: string;
   } | null>(null);
   const [showPendingRoster, setShowPendingRoster] = useState(false);
+  const [showDeliveredRoster, setShowDeliveredRoster] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -427,24 +428,30 @@ function CommunicationsPage() {
             </p>
           </div>
 
-          {/* Tile 2: Delivered Block */}
-          <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs">
+          {/* Tile 2: Sent Resumption Mail */}
+          <div
+            onClick={() => setShowDeliveredRoster((prev) => !prev)}
+            className="group cursor-pointer rounded-xl border border-brand-green/30 bg-card p-4.5 shadow-xs transition-all hover:border-brand-green hover:shadow-sm"
+          >
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold uppercase tracking-wide text-brand-green-dark">
-                Notices Delivered
+                Sent Resumption Mail
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-brand-green-soft px-2 py-0.5 text-[11px] font-bold text-brand-green-dark border border-brand-green/30">
-                <CheckCircle2 className="h-3 w-3" /> Notified Cohort
+                <CheckCircle2 className="h-3 w-3" /> {deliveredResumptionApps.length > 0 ? "Notices Dispatched" : "No Mails Sent Yet"}
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-foreground">
+              <span className="text-3xl font-black text-brand-green-dark">
                 {deliveredResumptionApps.length}
               </span>
               <span className="text-xs font-medium text-muted-foreground">Scholars Notified</span>
             </div>
-            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              Received official Resend Pro email and portal resumption instruction.
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed flex items-center justify-between">
+              <span>Official Resend Pro emails & portal instructions delivered.</span>
+              <span className="text-[11px] font-bold text-brand-green-dark group-hover:underline">
+                {showDeliveredRoster ? "Hide list ↑" : "View list ↓"}
+              </span>
             </p>
           </div>
 
@@ -510,6 +517,27 @@ function CommunicationsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeliveredRoster((prev) => !prev)}
+                className={`gap-1.5 text-xs font-bold ${
+                  showDeliveredRoster
+                    ? "bg-brand-green-soft text-brand-green-dark border-brand-green/40"
+                    : "border-border text-foreground hover:bg-secondary"
+                }`}
+              >
+                {showDeliveredRoster ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" /> Hide Sent Mail Roster
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-brand-green" /> View Sent Resumption Mail ({deliveredResumptionApps.length})
+                  </>
+                )}
+              </Button>
+
               {pendingResumptionApps.length > 0 && (
                 <Button
                   variant="outline"
@@ -519,12 +547,11 @@ function CommunicationsPage() {
                 >
                   {showPendingRoster ? (
                     <>
-                      <ChevronUp className="h-4 w-4" /> Hide Candidates
+                      <ChevronUp className="h-4 w-4" /> Hide Pending
                     </>
                   ) : (
                     <>
-                      <ChevronDown className="h-4 w-4" /> Preview Roster (
-                      {pendingResumptionApps.length})
+                      <ChevronDown className="h-4 w-4" /> Preview Pending ({pendingResumptionApps.length})
                     </>
                   )}
                 </Button>
@@ -553,6 +580,88 @@ function CommunicationsPage() {
               </Button>
             </div>
           </div>
+
+          {/* Collapsible Sent Resumption Mail Roster */}
+          {showDeliveredRoster && (
+            <div className="mt-4 rounded-xl border border-brand-green/30 overflow-hidden bg-background shadow-xs">
+              <div className="bg-brand-green-soft/50 px-4 py-3 border-b border-brand-green/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-brand-green-dark" />
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-brand-green-dark">
+                    Sent Resumption Mail Cohort ({deliveredResumptionApps.length} Scholars Notified)
+                  </span>
+                </div>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  Official Resend Pro notices delivered • Target arrival: Oct 15, 2027
+                </span>
+              </div>
+
+              {deliveredResumptionApps.length === 0 ? (
+                <div className="p-8 text-center space-y-2">
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-secondary text-muted-foreground">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">No Resumption Mails Sent Yet</p>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                    When you approve applicants and click "Dispatch Resumption Mail to Current Block", scholars will receive official emails and appear in this roster.
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
+                  {deliveredResumptionApps.map((app) => (
+                    <div
+                      key={app.id}
+                      className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-secondary/20 transition-colors"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/admin/applicants/$applicationId"
+                            params={{ applicationId: app.id }}
+                            className="font-bold text-foreground hover:text-brand-green underline decoration-brand-green/40 underline-offset-2"
+                          >
+                            {app.personal?.firstName} {app.personal?.lastName}
+                          </Link>
+                          <span className="font-mono text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                            {app.appNumber}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {app.personal?.email} • {app.personal?.phone || "No phone"}
+                        </p>
+                      </div>
+
+                      <div className="sm:text-right space-y-0.5">
+                        <p className="font-semibold text-foreground">{app.programme}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Dispatched: {app.personal?.resumptionEmailSentAt ? formatDate(app.personal.resumptionEmailSentAt) : "Delivered"}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {app.personal?.resumptionAttendanceConfirmed ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-brand-green-soft px-2.5 py-1 text-[10px] font-extrabold text-brand-green-dark border border-brand-green/30">
+                            <CheckCircle2 className="h-3 w-3" /> RSVP: Coming to Aba
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold text-muted-foreground border border-border">
+                            <Clock className="h-3 w-3" /> RSVP: Awaiting Scholar
+                          </span>
+                        )}
+                        <Link
+                          to="/admin/applicants/$applicationId"
+                          params={{ applicationId: app.id }}
+                          className="text-[11px] font-bold text-brand-green-dark hover:underline"
+                        >
+                          View Dossier →
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Collapsible Pending Candidate Roster */}
           {showPendingRoster && pendingResumptionApps.length > 0 && (
@@ -680,7 +789,7 @@ function CommunicationsPage() {
                 : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
             }`}
           >
-            ✓ Resumption (Delivered: {deliveredResumptionApps.length})
+            ✓ Sent Resumption Mail ({deliveredResumptionApps.length})
           </button>
           <button
             type="button"

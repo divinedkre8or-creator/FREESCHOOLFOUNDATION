@@ -3,11 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  Building2,
   Check,
   CheckCircle2,
   CheckSquare,
   ChevronDown,
   ChevronUp,
+  Church,
   ClipboardCheck,
   Clock,
   Eye,
@@ -421,8 +423,8 @@ function ApplicantProfile() {
             <div className="sm:text-right space-y-2">
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <StatusBadge status={application.status} />
-                {(application.status === "Approved" || application.status === "Enrolled") &&
-                  (application.personal?.resumptionEmailSent ? (
+                {application.status === "Approved" || application.status === "Enrolled" ? (
+                  application.personal?.resumptionEmailSent ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-brand-green/20 bg-brand-green/10 px-2.5 py-0.5 text-[11px] font-bold text-brand-green-dark">
                       <CheckCircle2 className="h-3 w-3" /> Resumption Notice Sent
                     </span>
@@ -430,7 +432,12 @@ function ApplicantProfile() {
                     <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
                       <Clock className="h-3 w-3" /> Resumption Notice Pending
                     </span>
-                  ))}
+                  )
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <Clock className="h-3 w-3" /> Resumption Notice: Locked (Pending Approval)
+                  </span>
+                )}
               </div>
               <p className="text-xs font-bold text-foreground">
                 {application.programme} ({application.level})
@@ -496,28 +503,156 @@ function ApplicantProfile() {
                 ["State of Origin", application.personal.stateOfOrigin],
                 ["State of Residence", application.personal.stateOfResidence],
                 ["Religion", application.personal.religion || "—"],
-                [
-                  "Aba Study Centre Attendance",
-                  application.personal.physicalAttendanceAcknowledged
-                    ? "Acknowledged & Agreed"
-                    : "Standard",
-                ],
-                [
-                  "Church Ministry Partnership & Activities",
-                  application.personal.churchMinistryEthosAcknowledged
-                    ? "Acknowledged & Pledged"
-                    : "Standard",
-                ],
-                [
-                  "Scholarship Terms Sign-Off",
-                  application.personal.scholarshipCommitmentAcknowledged
-                    ? "Signed & Understood"
-                    : "Standard",
-                ],
                 ["Residential Address", application.personal.address],
                 ["Contact Phone", application.personal.phone],
+                ["Contact Email", application.personal.email],
               ]}
             />
+          </CollapsibleSection>
+
+          {/* Section: Candidate Declarations, Consents & Legal Sign-Offs */}
+          <CollapsibleSection
+            title="Candidate Declarations, Consents & Signed Agreements"
+            sectionKey="consents"
+            collapsed={collapsedSections["consents"]}
+            onToggle={toggleSection}
+          >
+            <div className="space-y-3.5">
+              <p className="text-xs text-muted-foreground">
+                Mandatory legal declarations and terms agreed to and signed off by{" "}
+                <strong className="text-foreground">{fullName(application)}</strong> at the time of application submission.
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-1">
+                {/* 1. Aba Attendance */}
+                <div className="rounded-xl border border-brand-orange/30 bg-card p-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-orange-soft text-brand-orange">
+                        <Building2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-brand-orange">
+                          1. Mandatory On-Ground Attendance • Aba Study Centre
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                          Confirmed physical availability and presence on ground at the <strong>Aba Study Centre / Story Center</strong> (Abia State) for lectures, laboratory practicals, and examinations throughout the scholarship.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="self-start inline-flex items-center gap-1 rounded-full border border-brand-green/30 bg-brand-green-soft px-2.5 py-1 text-[11px] font-extrabold text-brand-green-dark shrink-0">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-brand-green-dark" /> Confirmed & Agreed
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Church Ministry Ethos */}
+                <div className="rounded-xl border border-brand-green/30 bg-card p-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-green-soft text-brand-green-dark">
+                        <Church className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-brand-green-dark">
+                          2. Church Ministry Sponsorship & Faith Ethos Agreement
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                          Acknowledged that this 100% tuition-free scholarship is funded and supported in partnership with a Christian church ministry, and willingly committed to participating in scheduled church fellowship, community activities, and moral leadership.
+                        </p>
+                      </div>
+                    </div>
+                    {application.personal.churchMinistryEthosAcknowledged ? (
+                      <span className="self-start inline-flex items-center gap-1 rounded-full border border-brand-green/30 bg-brand-green-soft px-2.5 py-1 text-[11px] font-extrabold text-brand-green-dark shrink-0">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-green-dark" /> Acknowledged & Pledged
+                      </span>
+                    ) : (
+                      <span className="self-start inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shrink-0" title="Submitted on earlier portal form prior to church ministry ethos requirement update">
+                        <Clock className="h-3.5 w-3.5 text-amber-600" /> Legacy Form (Prior to Ethos Update)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Informed Commitment Sign-off */}
+                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-foreground">
+                        <FileCheck2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                          3. Informed Consent & Scholarship Commitment Sign-Off
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                          Certified clear understanding that scholarship benefits and admission are strictly conditional upon physical attendance and fellowship participation, and that breach of these terms will lead to immediate loss of scholarship seat.
+                        </p>
+                      </div>
+                    </div>
+                    {application.personal.scholarshipCommitmentAcknowledged ? (
+                      <span className="self-start inline-flex items-center gap-1 rounded-full border border-brand-green/30 bg-brand-green-soft px-2.5 py-1 text-[11px] font-extrabold text-brand-green-dark shrink-0">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-green-dark" /> Signed & Understood
+                      </span>
+                    ) : (
+                      <span className="self-start inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shrink-0" title="Submitted on earlier portal form prior to commitment sign-off update">
+                        <Clock className="h-3.5 w-3.5 text-amber-600" /> Legacy Form (Prior to Sign-Off Update)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Accuracy Declaration */}
+                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-green-soft/50 text-brand-green-dark">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                          4. Application Accuracy & Scholarship Terms Declaration
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                          Certified under penalty of disqualification that all biodata, educational records, and exam details provided are authentic, accurate, and complete. Formally accepted all official Foundation Application Terms.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="self-start inline-flex items-center gap-1 rounded-full border border-brand-green/30 bg-brand-green-soft px-2.5 py-1 text-[11px] font-extrabold text-brand-green-dark shrink-0">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-brand-green-dark" /> Formally Declared & Accepted
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. Communication Consent */}
+                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-foreground">
+                        <Mail className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                          5. Communication & Privacy Notice Consent
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                          Consented to receiving application-related notices, admission updates, and official committee communications via email, SMS, and portal messages under the Foundation Privacy Notice.
+                        </p>
+                      </div>
+                    </div>
+                    {application.consentCommunication ? (
+                      <span className="self-start inline-flex items-center gap-1 rounded-full border border-brand-green/30 bg-brand-green-soft px-2.5 py-1 text-[11px] font-extrabold text-brand-green-dark shrink-0">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-green-dark" /> Agreed & Opted In
+                      </span>
+                    ) : (
+                      <span className="self-start inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground shrink-0">
+                        Declined
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </CollapsibleSection>
 
           {/* Section 3: Educational Background Scrutiny */}
@@ -983,14 +1118,14 @@ function ApplicantProfile() {
             </Button>
           </section>
 
-          {/* Official Resumption Notice Card for Approved/Enrolled candidates */}
-          {(application.status === "Approved" || application.status === "Enrolled") && (
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-bold text-foreground">
-                  <GraduationCap className="h-4 w-4 text-brand-green" /> Resumption Notice
-                </div>
-                {application.personal?.resumptionEmailSent ? (
+          {/* Official Resumption Notice Card - Always visible across all application statuses */}
+          <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <GraduationCap className="h-4 w-4 text-brand-green" /> Official Resumption Notice
+              </div>
+              {application.status === "Approved" || application.status === "Enrolled" ? (
+                application.personal?.resumptionEmailSent ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-green/10 px-2.5 py-0.5 text-[11px] font-bold text-brand-green-dark border border-brand-green/20">
                     <CheckCircle2 className="h-3 w-3" /> Delivered
                   </span>
@@ -998,71 +1133,98 @@ function ApplicantProfile() {
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-500/20">
                     <Clock className="h-3 w-3" /> Awaiting Notice
                   </span>
-                )}
-              </div>
+                )
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/80 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  <Clock className="h-3 w-3" /> Unlocked upon Approval
+                </span>
+              )}
+            </div>
 
-              <div className="mt-3 rounded-xl border border-border bg-secondary/30 p-3.5 text-xs space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">Notice Status:</span>
-                  <span className="font-bold text-foreground">
-                    {application.personal?.resumptionEmailSent ? "Delivered to Candidate" : "Pending Dispatch"}
-                  </span>
-                </div>
-                {application.personal?.resumptionEmailSentAt && (
+            {application.status === "Approved" || application.status === "Enrolled" ? (
+              <>
+                <div className="mt-3 rounded-xl border border-border bg-secondary/30 p-3.5 text-xs space-y-2">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">Dispatched At:</span>
-                    <span className="font-semibold text-foreground">
-                      {formatDateTime(application.personal.resumptionEmailSentAt)}
+                    <span className="text-muted-foreground">Notice Status:</span>
+                    <span className="font-bold text-foreground">
+                      {application.personal?.resumptionEmailSent ? "Delivered to Candidate" : "Pending Dispatch"}
                     </span>
                   </div>
-                )}
-                {application.personal?.resumptionAttendanceConfirmed && (
-                  <div className="flex items-center justify-between text-[11px] text-brand-green-dark font-bold pt-1 border-t border-border/50">
-                    <span>Attendance RSVP:</span>
-                    <span>Confirmed by Candidate</span>
+                  {application.personal?.resumptionEmailSentAt && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Dispatched At:</span>
+                      <span className="font-semibold text-foreground">
+                        {formatDateTime(application.personal.resumptionEmailSentAt)}
+                      </span>
+                    </div>
+                  )}
+                  {application.personal?.resumptionAttendanceConfirmed && (
+                    <div className="flex items-center justify-between text-[11px] text-brand-green-dark font-bold pt-1 border-t border-border/50">
+                      <span>Attendance RSVP:</span>
+                      <span>Confirmed by Candidate</span>
+                    </div>
+                  )}
+                </div>
+
+                {application.personal?.resumptionEmailSent ? (
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs font-bold gap-1.5"
+                      disabled={dispatchingResumption}
+                      onClick={() => setResendDialogOpen(true)}
+                    >
+                      {dispatchingResumption ? (
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      )}
+                      Resend Resumption Notice
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      className="w-full text-xs font-bold gap-1.5 bg-brand-green hover:bg-brand-green/90 text-white"
+                      disabled={dispatchingResumption}
+                      onClick={() => void handleDispatchResumptionNotice(false)}
+                    >
+                      {dispatchingResumption ? (
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
+                      Send Resumption Notice & Confirmation
+                    </Button>
+                    <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+                      Sends timetable, requirements, and marks batch block as delivered.
+                    </p>
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/20 p-3.5 text-xs text-muted-foreground space-y-2.5">
+                <p className="leading-relaxed">
+                  Resumption notice dispatch is queued. When you approve this candidate, the official reporting timetable, Aba center guidelines, and portal attendance confirmation will be unlocked.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs font-bold gap-1.5 text-brand-green-dark border-brand-green/30 hover:bg-brand-green-soft"
+                  onClick={() => {
+                    setStatus("Approved");
+                    setStatusMessage(
+                      "Congratulations! Your scholarship application has been APPROVED for Citi Polytechnic ODF-EL 2026. Next onboarding steps will follow.",
+                    );
+                  }}
+                >
+                  <Check className="h-3.5 w-3.5 text-brand-green" /> Select Approve to Unlock Notice
+                </Button>
               </div>
-
-              {application.personal?.resumptionEmailSent ? (
-                <div className="mt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs font-bold gap-1.5"
-                    disabled={dispatchingResumption}
-                    onClick={() => setResendDialogOpen(true)}
-                  >
-                    {dispatchingResumption ? (
-                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    )}
-                    Resend Resumption Notice
-                  </Button>
-                </div>
-              ) : (
-                <div className="mt-3">
-                  <Button
-                    size="sm"
-                    className="w-full text-xs font-bold gap-1.5 bg-brand-green hover:bg-brand-green/90 text-white"
-                    disabled={dispatchingResumption}
-                    onClick={() => void handleDispatchResumptionNotice(false)}
-                  >
-                    {dispatchingResumption ? (
-                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Send className="h-3.5 w-3.5" />
-                    )}
-                    Send Resumption Notice & Confirmation
-                  </Button>
-                  <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
-                    Sends timetable, requirements, and marks batch block as delivered.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
+            )}
+          </section>
 
           {/* Private Internal Notes Box */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">

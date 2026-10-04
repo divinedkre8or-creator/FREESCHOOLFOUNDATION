@@ -193,7 +193,7 @@ export type Application = {
   programme: Programme;
   personal: {
     firstName: string;
-    middleName?: string;
+    middleName?: string | undefined;
     lastName: string;
     dob: string;
     phone: string;
@@ -201,17 +201,20 @@ export type Application = {
     address: string;
     stateOfResidence: string;
     stateOfOrigin: string;
-    religion?: string;
-    physicalAttendanceAcknowledged?: boolean;
-    churchMinistryEthosAcknowledged?: boolean;
-    scholarshipCommitmentAcknowledged?: boolean;
-    resumptionAttendanceConfirmed?: boolean;
-    resumptionAttendanceConfirmedAt?: string;
-    resumptionTargetDate?: string;
-    resumptionEmailSent?: boolean;
-    resumptionEmailSentAt?: string;
-    resumptionEmailBatchId?: string;
-    photo?: string;
+    religion?: string | undefined;
+    physicalAttendanceAcknowledged?: boolean | undefined;
+    churchMinistryEthosAcknowledged?: boolean | undefined;
+    scholarshipCommitmentAcknowledged?: boolean | undefined;
+    declarationAccepted?: boolean | undefined;
+    declarationAcceptedAt?: string | undefined;
+    communicationConsentAccepted?: boolean | undefined;
+    resumptionAttendanceConfirmed?: boolean | undefined;
+    resumptionAttendanceConfirmedAt?: string | undefined;
+    resumptionTargetDate?: string | undefined;
+    resumptionEmailSent?: boolean | undefined;
+    resumptionEmailSentAt?: string | undefined;
+    resumptionEmailBatchId?: string | undefined;
+    photo?: string | undefined;
   };
   education: {
     // Secondary education

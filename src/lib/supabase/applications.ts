@@ -812,6 +812,27 @@ function mapApplication(data: ApplicationRow): Application {
 
   const mappedPersonal: Application["personal"] = {
     ...personal,
+    physicalAttendanceAcknowledged: Boolean(
+      personal?.physicalAttendanceAcknowledged ?? (data.submitted_at ? true : false),
+    ),
+    churchMinistryEthosAcknowledged:
+      personal?.churchMinistryEthosAcknowledged !== undefined
+        ? Boolean(personal.churchMinistryEthosAcknowledged)
+        : undefined,
+    scholarshipCommitmentAcknowledged:
+      personal?.scholarshipCommitmentAcknowledged !== undefined
+        ? Boolean(personal.scholarshipCommitmentAcknowledged)
+        : undefined,
+    declarationAccepted: Boolean(
+      personal?.declarationAccepted ?? (data.submitted_at ? true : false),
+    ),
+    declarationAcceptedAt:
+      personal?.declarationAcceptedAt ||
+      data.submitted_at ||
+      undefined,
+    communicationConsentAccepted: Boolean(
+      personal?.communicationConsentAccepted ?? data.communication_consent,
+    ),
     resumptionEmailSent: Boolean(personal?.resumptionEmailSent || hasResumptionMessage),
     ...(hasResumptionMessage && !personal?.resumptionEmailSentAt
       ? { resumptionEmailSentAt: data.submitted_at || data.created_at }
