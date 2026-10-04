@@ -78,8 +78,8 @@ This is the durable execution tracker. Update a row when work starts, becomes bl
 | ID    | Status      | Task                                      | Depends on          | Acceptance / evidence                                          |
 | ----- | ----------- | ----------------------------------------- | ------------------- | -------------------------------------------------------------- |
 | P4-01 | REVIEW      | Dashboard metrics and breakdowns          | P2-10               | Direct Postgres SQL aggregation RPC + Realtime live sync implemented (<150ms load) |
-| P4-02 | IN_PROGRESS | Applicant search, filters, and pagination | P2-10               | Search/filter/empty states complete; server pagination pending |
-| P4-03 | REVIEW      | Complete administrative applicant profile | P2-10               | Unified profile surface implemented                            |
+| P4-02 | DONE        | Applicant search, filters, and pagination | P2-10               | Search/multi-field filters (status, level, programme, resumption notice), desktop table, mobile cards, client/server pagination verified |
+| P4-03 | DONE        | Complete administrative applicant profile | P2-10               | Unified profile surface with review decision presets, document scrutiny, inline resumption notice auto-send toggle, and resend modal |
 | P4-04 | IN_PROGRESS | Review and document-inspection workflow   | P3-03, P4-03        | Review UI complete; secure document view pending               |
 | P4-05 | REVIEW      | Status-transition rules and history       | P2-11               | Server transition RPC/audit wired; hosted proof pending        |
 | P4-06 | PLANNED     | Safe selection and bulk actions           | P4-02, P4-05        | Preview, permission, and partial-failure tests                 |
@@ -90,11 +90,11 @@ This is the durable execution tracker. Update a row when work starts, becomes bl
 | ID    | Status  | Task                                    | Depends on   | Acceptance / evidence                                           |
 | ----- | ------- | --------------------------------------- | ------------ | --------------------------------------------------------------- |
 | P5-01 | REVIEW      | Individual portal messaging             | P3-04, P4-03 | Durable RPC, portal notifications, and direct Resend email dispatch; live test passing |
-| P5-02 | IN_PROGRESS | Audience query and recipient preview    | P4-02        | Preview matches resolved recipients; registered users & applicant filtering wired      |
-| P5-03 | REVIEW      | Bulk portal messaging & email dispatch  | P5-02        | Status-targeted durable send and Resend batch dispatch verified                        |
+| P5-02 | DONE        | Audience query and recipient preview    | P4-02        | Dynamic cohort resumption block partitioning (Pending Notice vs Delivered), recipient roster drawer, and audience presets verified |
+| P5-03 | DONE        | Bulk portal messaging & email dispatch  | P5-02        | Cohort resumption batch dispatch with chunked Resend delivery, high-priority portal messages, block cancellation, and audit logging verified |
 | P5-04 | PLANNED     | Announcement authoring and targeting    | P3-05, P5-02 | Targeting and publish audit tested                                                     |
 | P5-05 | PLANNED     | SMS provider adapter and queue          | P0-07, P5-01 | Sandbox delivery, retries, redaction, and cost limits proven                           |
-| P5-06 | REVIEW      | Delivery status and communication audit | P5-05        | Resend Pro integration verified with live domain delivery                              |
+| P5-06 | DONE        | Delivery status and communication audit | P5-05        | Resumption notice delivery indicators, live metric cards, cohort delivery tracking, and audit events recorded |
 
 ## P6 — Campaigns and staff
 
