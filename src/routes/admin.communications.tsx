@@ -1,12 +1,39 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Mail, MessageSquare, Send, Users } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  GraduationCap,
+  LoaderCircle,
+  Mail,
+  MapPin,
+  MessageSquare,
+  RefreshCw,
+  Send,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { STATUSES } from "@/lib/fsf";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { formatDate, RESUMPTION_BODY, RESUMPTION_SUBJECT, STATUSES } from "@/lib/fsf";
 import { useStore } from "@/lib/store";
 import {
+  dispatchResumptionEmailBatch,
   loadAdminApplications,
   loadRegisteredUsers,
   sendPortalMessage,
@@ -18,37 +45,8 @@ export const Route = createFileRoute("/admin/communications")({ component: Commu
 
 const AUDIENCE_UNAPPLIED = "Registered Users (Not Applied Yet)";
 const AUDIENCE_DRAFTS = "Registered Users (Draft in Progress)";
-
-const RESUMPTION_SUBJECT =
-  "Official Resumption Notice & Physical Onboarding Confirmation — The Free School Foundation";
-
-const RESUMPTION_BODY = `Dear Scholar,
-
-Following the official approval of your application for The Free School Foundation Scholarship, we are pleased to welcome you to the academic session.
-
-Please read the following important operational details carefully regarding how the programme runs:
-
-1. Physical On-Ground Resumption (Story Center, Aba):
-This programme requires full physical presence. All admitted students must relocate and be on-ground for academic and practical work at our Story Center in Aba, Abia State.
-
-2. Resumption Deadline:
-The final deadline for physical arrival and registration at the Aba Story Center is Thursday, October 15, 2027.
-
-3. Foundation & Church Partnership Ethos:
-This scholarship is fully funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar of the Foundation, all admitted students are expected to actively participate in the fellowship, values, and community activities of the church organization powering this scholarship.
-
-4. MANDATORY ACTION — Confirm Your Attendance:
-To enable us to prepare your materials, seat allocation, and reception logistics, you must indicate whether you will be coming.
-
-👉 Please log in to your scholarship portal immediately and click "Confirm Attendance / I Am Coming" to secure your spot.
-
-Portal Login Link: https://thefreeschoolfoundation.com.ng/portal
-
-If you have any logistical questions or require travel guidance to Aba, please reply directly through your portal message center or contact our support team.
-
-Warm regards,
-The Admissions & Onboarding Directorate
-The Free School Foundation`;
+const AUDIENCE_PENDING_RESUMPTION = "Approved (Awaiting Resumption Notice)";
+const AUDIENCE_DELIVERED_RESUMPTION = "Approved (Resumption Notice Delivered)";
 
 function CommunicationsPage() {
   const { setState } = useStore();
@@ -62,6 +60,15 @@ function CommunicationsPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  // Cohort block dispatch states
+  const [dispatchingCohort, setDispatchingCohort] = useState(false);
+  const [cohortModalOpen, setCohortModalOpen] = useState(false);
+  const [cohortFeedback, setCohortFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [showPendingRoster, setShowPendingRoster] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -86,6 +93,35 @@ function CommunicationsPage() {
     };
   }, [setState]);
 
+  // Dynamic Block Partitioning
+  const pendingResumptionApps = useMemo(
+    () =>
+      liveApplications.filter(
+        (app) =>
+          (app.status === "Approved" || app.status === "Enrolled") &&
+          !app.personal?.resumptionEmailSent,
+      ),
+    [liveApplications],
+  );
+
+  const deliveredResumptionApps = useMemo(
+    () =>
+      liveApplications.filter(
+        (app) =>
+          (app.status === "Approved" || app.status === "Enrolled") &&
+          Boolean(app.personal?.resumptionEmailSent),
+      ),
+    [liveApplications],
+  );
+
+  const rsvpConfirmedApps = useMemo(
+    () =>
+      deliveredResumptionApps.filter((app) =>
+        Boolean(app.personal?.resumptionAttendanceConfirmed),
+      ),
+    [deliveredResumptionApps],
+  );
+
   const isRegisteredAudience = audience === AUDIENCE_UNAPPLIED || audience === AUDIENCE_DRAFTS;
 
   const targetRegisteredUsers = useMemo(() => {
@@ -100,13 +136,18 @@ function CommunicationsPage() {
     return [];
   }, [audience, registeredUsers]);
 
-  const applicantRecipients = useMemo(
-    () =>
-      audience === "All applicants"
-        ? liveApplications.filter((app) => app.status !== "Draft")
-        : liveApplications.filter((app) => app.status === audience),
-    [liveApplications, audience],
-  );
+  const applicantRecipients = useMemo(() => {
+    if (audience === AUDIENCE_PENDING_RESUMPTION) {
+      return pendingResumptionApps;
+    }
+    if (audience === AUDIENCE_DELIVERED_RESUMPTION) {
+      return deliveredResumptionApps;
+    }
+    if (audience === "All applicants") {
+      return liveApplications.filter((app) => app.status !== "Draft");
+    }
+    return liveApplications.filter((app) => app.status === audience);
+  }, [liveApplications, audience, pendingResumptionApps, deliveredResumptionApps]);
 
   const recipientCount = isRegisteredAudience
     ? targetRegisteredUsers.length
@@ -114,28 +155,101 @@ function CommunicationsPage() {
 
   const handleAudienceChange = (newAudience: string) => {
     setAudience(newAudience);
-    if (newAudience === "Approved" || newAudience === "Enrolled") {
+    if (
+      newAudience === "Approved" ||
+      newAudience === "Enrolled" ||
+      newAudience === AUDIENCE_PENDING_RESUMPTION ||
+      newAudience === AUDIENCE_DELIVERED_RESUMPTION
+    ) {
       setPriority("high");
       setSubject(RESUMPTION_SUBJECT);
       setBody(RESUMPTION_BODY);
     } else if (newAudience === AUDIENCE_UNAPPLIED) {
-      if (!subject || subject.startsWith("Complete your") || subject.startsWith("Reminder:") || subject.startsWith("Official Resumption")) {
+      if (
+        !subject ||
+        subject.startsWith("Complete your") ||
+        subject.startsWith("Reminder:") ||
+        subject.startsWith("Official Resumption")
+      ) {
         setSubject("Complete your Free School Foundation scholarship application");
       }
-      if (!body || body.includes("registered on the scholarship portal") || body.includes("Story Center")) {
+      if (
+        !body ||
+        body.includes("registered on the scholarship portal") ||
+        body.includes("Story Center")
+      ) {
         setBody(
           "Hello,\n\nWe noticed you registered on the Free School Foundation scholarship portal but have not completed your application yet.\n\nScholarship applications are open and 100% free of charge. Please sign in and complete your application today to secure your opportunity.",
         );
       }
     } else if (newAudience === AUDIENCE_DRAFTS) {
-      if (!subject || subject.startsWith("Complete your") || subject.startsWith("Reminder:") || subject.startsWith("Official Resumption")) {
+      if (
+        !subject ||
+        subject.startsWith("Complete your") ||
+        subject.startsWith("Reminder:") ||
+        subject.startsWith("Official Resumption")
+      ) {
         setSubject("Reminder: Finish and submit your scholarship application");
       }
-      if (!body || body.includes("registered on the scholarship portal") || body.includes("draft") || body.includes("Story Center")) {
+      if (
+        !body ||
+        body.includes("registered on the scholarship portal") ||
+        body.includes("draft") ||
+        body.includes("Story Center")
+      ) {
         setBody(
           "Hello,\n\nYour scholarship application is currently saved as a draft. Don't leave your application incomplete!\n\nPlease log in to your portal and submit all required steps today before the current campaign closes.",
         );
       }
+    }
+  };
+
+  // Dispatch current block and cancel out
+  const handleDispatchCohortBlock = async () => {
+    if (pendingResumptionApps.length === 0) return;
+    setDispatchingCohort(true);
+    setCohortFeedback(null);
+    try {
+      const ids = pendingResumptionApps.map((a) => a.id);
+      const res = await dispatchResumptionEmailBatch({
+        applicationIds: ids,
+        customSubject: RESUMPTION_SUBJECT,
+        customBody: RESUMPTION_BODY,
+      });
+
+      const now = new Date().toISOString();
+      const updated = liveApplications.map((app) =>
+        ids.includes(app.id)
+          ? {
+              ...app,
+              personal: {
+                ...app.personal,
+                resumptionEmailSent: true,
+                resumptionEmailSentAt: now,
+                resumptionEmailBatchId: res.batchId,
+              },
+            }
+          : app,
+      );
+
+      setLiveApplications(updated);
+      setState((prev) => ({ ...prev, applications: updated }));
+
+      setCohortFeedback({
+        type: "success",
+        text: `Official resumption notice successfully dispatched to ${res.count} scholar${res.count === 1 ? "" : "s"} (${res.emailDeliveredCount} emails delivered via Resend Pro). The pending block has been canceled out.`,
+      });
+      setCohortModalOpen(false);
+    } catch (dispatchErr) {
+      setCohortFeedback({
+        type: "error",
+        text:
+          dispatchErr instanceof Error
+            ? dispatchErr.message
+            : "Failed to dispatch resumption cohort.",
+      });
+    } finally {
+      setDispatchingCohort(false);
     }
   };
 
@@ -167,6 +281,12 @@ function CommunicationsPage() {
           body,
           priority,
         });
+
+        const isResumptionDispatch =
+          subject.toLowerCase().includes("resumption") ||
+          audience === AUDIENCE_PENDING_RESUMPTION ||
+          audience === "Approved";
+
         try {
           await sendPlatformEmail({
             applicationIds: applicantRecipients.map((item) => item.id),
@@ -174,6 +294,26 @@ function CommunicationsPage() {
             subject,
             body,
           });
+
+          // If this was a resumption dispatch, update resumptionEmailSent locally
+          if (isResumptionDispatch) {
+            const now = new Date().toISOString();
+            const recipientIds = new Set(applicantRecipients.map((a) => a.id));
+            const updated = liveApplications.map((app) =>
+              recipientIds.has(app.id)
+                ? {
+                    ...app,
+                    personal: {
+                      ...app.personal,
+                      resumptionEmailSent: true,
+                      resumptionEmailSentAt: now,
+                    },
+                  }
+                : app,
+            );
+            setLiveApplications(updated);
+            setState((prev) => ({ ...prev, applications: updated }));
+          }
         } catch {
           setSubject("");
           setBody("");
@@ -194,14 +334,317 @@ function CommunicationsPage() {
   };
 
   return (
-    <div>
-      <p className="text-sm font-bold text-brand-orange">Communication centre</p>
-      <h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">Portal & Email Communications</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Target applicants by review status or send direct email reminders to registered users who
-        haven't applied yet.
-      </p>
-      <section className="mt-7 max-w-3xl rounded-2xl border border-border bg-card p-5 md:p-7">
+    <div className="space-y-8">
+      <div>
+        <p className="text-sm font-bold text-brand-orange">Communication centre</p>
+        <h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">Portal & Email Communications</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Manage cohort resumption notices with automated block cancellation, or compose targeted
+          messages by application status.
+        </p>
+      </div>
+
+      {/* Hero Section: Resumption Notice & Cohort Block Manager */}
+      <section className="overflow-hidden rounded-2xl border-2 border-brand-green/30 bg-card shadow-soft">
+        <div className="border-b border-border/80 bg-brand-green-soft/40 p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-green text-white shadow-xs">
+                <GraduationCap className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-extrabold text-foreground sm:text-xl">
+                    Official Resumption Notice & Cohort Dispatch
+                  </h2>
+                  <span className="rounded-full bg-brand-green/20 px-2.5 py-0.5 text-[11px] font-extrabold text-brand-green-dark">
+                    Aba Story Center
+                  </span>
+                </div>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                  Monitor approved students, dispatch official resumption notices, and cancel out
+                  sent blocks automatically so newly approved students queue separately.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loadingApps}
+              onClick={() => {
+                setLoadingApps(true);
+                void loadAdminApplications().then((apps) => {
+                  setLiveApplications(apps);
+                  setState((prev) => ({ ...prev, applications: apps }));
+                  setLoadingApps(false);
+                });
+              }}
+              className="self-start sm:self-auto gap-1 text-xs font-bold"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingApps ? "animate-spin" : ""}`} />
+              Refresh Cohort
+            </Button>
+          </div>
+        </div>
+
+        {/* Dynamic Metric Tiles */}
+        <div className="grid gap-4 border-b border-border/80 p-5 sm:grid-cols-3 sm:p-6 bg-secondary/15">
+          {/* Tile 1: Pending Resumption Block */}
+          <div className="rounded-xl border border-brand-orange/30 bg-card p-4.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wide text-brand-orange">
+                Pending Block
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold ${
+                  pendingResumptionApps.length > 0
+                    ? "bg-brand-orange-soft text-brand-orange border border-brand-orange/40 animate-pulse"
+                    : "bg-brand-green-soft text-brand-green-dark border border-brand-green/30"
+                }`}
+              >
+                {pendingResumptionApps.length > 0 ? (
+                  <>
+                    <Clock className="h-3 w-3" /> Awaiting Notice
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-3 w-3" /> Block Canceled Out
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-black text-foreground">
+                {pendingResumptionApps.length}
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">Approved Scholars</span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+              {pendingResumptionApps.length > 0
+                ? "Newly approved candidates awaiting resumption mail."
+                : "All currently approved candidates have received resumption notices."}
+            </p>
+          </div>
+
+          {/* Tile 2: Delivered Block */}
+          <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wide text-brand-green-dark">
+                Notices Delivered
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-green-soft px-2 py-0.5 text-[11px] font-bold text-brand-green-dark border border-brand-green/30">
+                <CheckCircle2 className="h-3 w-3" /> Notified Cohort
+              </span>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-black text-foreground">
+                {deliveredResumptionApps.length}
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">Scholars Notified</span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+              Received official Resend Pro email and portal resumption instruction.
+            </p>
+          </div>
+
+          {/* Tile 3: RSVP Confirmed */}
+          <div className="rounded-xl border border-border bg-card p-4.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wide text-brand-green-dark">
+                Aba Physical RSVP
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-green-soft px-2 py-0.5 text-[11px] font-bold text-brand-green-dark border border-brand-green/30">
+                <Building2 className="h-3 w-3" /> Story Center
+              </span>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-black text-brand-green-dark">
+                {rsvpConfirmedApps.length}
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">Confirmed Coming</span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+              Scholars who clicked “I Am Coming” to confirm on-ground arrival.
+            </p>
+          </div>
+        </div>
+
+        {/* Feedback Banner */}
+        {cohortFeedback && (
+          <div
+            className={`p-4 text-xs sm:text-sm font-semibold border-b ${
+              cohortFeedback.type === "success"
+                ? "bg-brand-green-soft text-brand-green-dark border-brand-green/30"
+                : "bg-destructive/10 text-destructive border-destructive/30"
+            }`}
+          >
+            {cohortFeedback.text}
+          </div>
+        )}
+
+        {/* Action Bar & Candidate Preview */}
+        <div className="p-5 sm:p-6 bg-card space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                {pendingResumptionApps.length > 0 ? (
+                  <span>
+                    Ready to dispatch to{" "}
+                    <strong className="text-brand-orange">
+                      {pendingResumptionApps.length} scholars
+                    </strong>{" "}
+                    in the pending block
+                  </span>
+                ) : (
+                  <span className="text-brand-green-dark font-extrabold">
+                    ✓ Pending block is completely clear. No new approvals pending dispatch.
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Target resumption deadline:{" "}
+                <strong className="text-foreground">Thursday, October 15, 2027</strong> at Aba Story
+                Center.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {pendingResumptionApps.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPendingRoster((prev) => !prev)}
+                  className="gap-1.5 text-xs font-bold"
+                >
+                  {showPendingRoster ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" /> Hide Candidates
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" /> Preview Roster (
+                      {pendingResumptionApps.length})
+                    </>
+                  )}
+                </Button>
+              )}
+
+              <Button
+                size="default"
+                disabled={pendingResumptionApps.length === 0 || dispatchingCohort}
+                onClick={() => setCohortModalOpen(true)}
+                className={`font-bold transition-all shadow-sm ${
+                  pendingResumptionApps.length > 0
+                    ? "bg-brand-green text-white hover:bg-brand-green-dark"
+                    : "bg-secondary text-muted-foreground cursor-not-allowed"
+                }`}
+              >
+                {dispatchingCohort ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Dispatching Cohort…
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Dispatch Resumption Mail to Current Block ({pendingResumptionApps.length})
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Collapsible Pending Candidate Roster */}
+          {showPendingRoster && pendingResumptionApps.length > 0 && (
+            <div className="mt-4 rounded-xl border border-border overflow-hidden bg-background">
+              <div className="bg-secondary/40 px-4 py-2.5 border-b border-border flex items-center justify-between text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+                <span>Candidate / App #</span>
+                <span>Programme</span>
+                <span>Status</span>
+              </div>
+              <div className="max-h-60 overflow-y-auto divide-y divide-border/60">
+                {pendingResumptionApps.map((app) => (
+                  <div
+                    key={app.id}
+                    className="px-4 py-3 flex items-center justify-between text-xs hover:bg-secondary/20"
+                  >
+                    <div>
+                      <p className="font-bold text-foreground">
+                        {app.personal?.firstName} {app.personal?.lastName}
+                      </p>
+                      <p className="font-mono text-[11px] text-muted-foreground">{app.appNumber}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-foreground">{app.programme}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {app.personal?.stateOfOrigin || "Abia"} • {app.personal?.religion || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="rounded-full bg-brand-orange-soft px-2 py-0.5 text-[10px] font-extrabold text-brand-orange border border-brand-orange/30">
+                        Pending Mail
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Confirmation Dialog for Block Dispatch */}
+      <AlertDialog open={cohortModalOpen} onOpenChange={setCohortModalOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-extrabold">
+              <Send className="h-5 w-5 text-brand-green" />
+              Confirm Resumption Dispatch to Current Block
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2 text-left">
+              <p className="text-sm text-foreground">
+                You are about to dispatch official resumption notices to{" "}
+                <strong className="text-brand-orange font-bold">
+                  {pendingResumptionApps.length} approved scholar
+                  {pendingResumptionApps.length === 1 ? "" : "s"}
+                </strong>
+                .
+              </p>
+              <div className="rounded-xl border border-border bg-secondary/40 p-3.5 text-xs text-muted-foreground space-y-1.5">
+                <p className="font-bold text-foreground">What happens next:</p>
+                <p>
+                  1. Each scholar receives an official branded email via Resend Pro instructing them
+                  to prepare for on-ground arrival at Aba Story Center by October 15, 2027.
+                </p>
+                <p>
+                  2. A high-priority banner is pinned to their portal with an interactive RSVP
+                  button (<strong>Confirm Attendance / I Am Coming</strong>).
+                </p>
+                <p className="font-bold text-brand-green-dark">
+                  3. This pending block is immediately canceled out to 0. When you approve more
+                  students later, only those new approvals will queue up.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={dispatchingCohort}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={dispatchingCohort}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDispatchCohortBlock();
+              }}
+              className="bg-brand-green font-bold text-white hover:bg-brand-green-dark"
+            >
+              {dispatchingCohort ? "Dispatching…" : "Confirm & Cancel Block"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Standard Custom Message Composer Section */}
+      <section className="max-w-3xl rounded-2xl border border-border bg-card p-5 md:p-7 shadow-xs">
         <div className="flex items-center gap-2 rounded-lg bg-brand-green-soft p-3 text-sm font-bold text-brand-green-dark">
           {isRegisteredAudience ? (
             <>
@@ -219,14 +662,25 @@ function CommunicationsPage() {
           <span className="text-xs font-bold text-muted-foreground">Quick Presets:</span>
           <button
             type="button"
-            onClick={() => handleAudienceChange("Approved")}
+            onClick={() => handleAudienceChange(AUDIENCE_PENDING_RESUMPTION)}
             className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
-              audience === "Approved"
+              audience === AUDIENCE_PENDING_RESUMPTION
+                ? "bg-brand-orange text-white shadow-xs"
+                : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
+            }`}
+          >
+            ⏳ Resumption (Pending Block: {pendingResumptionApps.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAudienceChange(AUDIENCE_DELIVERED_RESUMPTION)}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+              audience === AUDIENCE_DELIVERED_RESUMPTION
                 ? "bg-brand-green text-white shadow-xs"
                 : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
             }`}
           >
-            🎓 Resumption Notice (Approved Scholars)
+            ✓ Resumption (Delivered: {deliveredResumptionApps.length})
           </button>
           <button
             type="button"
@@ -260,11 +714,19 @@ function CommunicationsPage() {
               value={audience}
               onChange={(event) => handleAudienceChange(event.target.value)}
             >
+              <optgroup label="Resumption Cohort Blocks">
+                <option value={AUDIENCE_PENDING_RESUMPTION}>
+                  {AUDIENCE_PENDING_RESUMPTION} ({pendingResumptionApps.length})
+                </option>
+                <option value={AUDIENCE_DELIVERED_RESUMPTION}>
+                  {AUDIENCE_DELIVERED_RESUMPTION} ({deliveredResumptionApps.length})
+                </option>
+              </optgroup>
               <optgroup label="Registered Accounts (Unapplied / Incomplete)">
                 <option>{AUDIENCE_UNAPPLIED}</option>
                 <option>{AUDIENCE_DRAFTS}</option>
               </optgroup>
-              <optgroup label="Applicants (By Status)">
+              <optgroup label="Applicants (By General Status)">
                 <option>All applicants</option>
                 {STATUSES.filter((status) => status !== "Draft").map((status) => (
                   <option key={status}>{status}</option>
@@ -292,7 +754,7 @@ function CommunicationsPage() {
             <Input
               className="mt-2 h-11 font-normal"
               maxLength={180}
-              placeholder="e.g. Complete your Free School Foundation scholarship application"
+              placeholder="e.g. Official Resumption Notice & Physical Onboarding Confirmation"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
             />
@@ -331,7 +793,7 @@ function CommunicationsPage() {
           {message && <p className="text-sm font-semibold text-brand-green-dark">{message}</p>}
           <Button
             size="lg"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto font-bold"
             disabled={sending || !subject.trim() || !body.trim() || recipientCount === 0}
             onClick={() => void send()}
           >
@@ -340,7 +802,7 @@ function CommunicationsPage() {
               ? "Sending…"
               : isRegisteredAudience
                 ? `Send email reminder to ${recipientCount} user${recipientCount === 1 ? "" : "s"}`
-                : "Send portal and email update"}
+                : `Send portal and email update to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}`}
           </Button>
         </div>
       </section>
