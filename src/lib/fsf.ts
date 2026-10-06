@@ -651,19 +651,27 @@ Following the official approval of your application for The Free School Foundati
 
 Please read the following important operational details carefully regarding how the programme runs:
 
-1. Physical On-Ground Resumption (Story Center, Aba):
-This programme requires full physical presence. All admitted students must relocate and be on-ground for academic and practical work at our Story Center in Aba, Abia State.
+1. Physical On-Ground Resumption (Study Center, Aba)
+This programme requires full physical presence. All admitted students must relocate and be on-ground for academic and practical work at our Study Center in Aba, Abia State.
 
-2. Resumption Deadline:
-The final deadline for physical arrival and registration at the Aba Story Center is Thursday, October 15, 2027.
+2. Resumption Deadline
+The final deadline for physical arrival and registration at the Aba Study Center is Thursday, October 15, 2026.
 
-3. Foundation & Church Partnership Ethos:
+3. Mandatory Documents
+All admitted scholars are required to make the following documents available for verification and registration:
+- JAMB Result
+- WAEC/NECO Result
+- LG of Origin Document
+- Letter of Attestation
+Please ensure that these documents are available and ready for submission/verification upon resumption.
+
+4. Foundation & Church Partnership Ethos
 This scholarship is fully funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar of the Foundation, all admitted students are expected to actively participate in the fellowship, values, and community activities of the church organization powering this scholarship.
 
-4. MANDATORY ACTION — Confirm Your Attendance:
+5. MANDATORY ACTION — Confirm Your Attendance
 To enable us to prepare your materials, seat allocation, and reception logistics, you must indicate whether you will be coming.
 
-👉 Please log in to your scholarship portal immediately and click "Confirm Attendance / I Am Coming" to secure your spot.
+Please log in to your scholarship portal immediately and click "Confirm Attendance / I Am Coming" to secure your spot.
 
 Portal Login Link: https://thefreeschoolfoundation.com.ng/portal
 

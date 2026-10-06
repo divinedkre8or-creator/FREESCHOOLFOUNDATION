@@ -359,7 +359,7 @@ function CommunicationsPage() {
                     Official Resumption Notice & Cohort Dispatch
                   </h2>
                   <span className="rounded-full bg-brand-green/20 px-2.5 py-0.5 text-[11px] font-extrabold text-brand-green-dark">
-                    Aba Story Center
+                    Aba Study Centre
                   </span>
                 </div>
                 <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
@@ -462,7 +462,7 @@ function CommunicationsPage() {
                 Aba Physical RSVP
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-brand-green-soft px-2 py-0.5 text-[11px] font-bold text-brand-green-dark border border-brand-green/30">
-                <Building2 className="h-3 w-3" /> Story Center
+                <Building2 className="h-3 w-3" /> Aba Study Centre
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
@@ -511,7 +511,7 @@ function CommunicationsPage() {
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Target resumption deadline:{" "}
-                <strong className="text-foreground">Thursday, October 15, 2027</strong> at Aba Story
+                <strong className="text-foreground">Thursday, October 15, 2026</strong> at Aba Study
                 Center.
               </p>
             </div>
@@ -592,7 +592,7 @@ function CommunicationsPage() {
                   </span>
                 </div>
                 <span className="text-[11px] text-muted-foreground font-medium">
-                  Official Resend Pro notices delivered • Target arrival: Oct 15, 2027
+                  Official Resend Pro notices delivered • Target arrival: Oct 15, 2026
                 </span>
               </div>
 
@@ -723,7 +723,7 @@ function CommunicationsPage() {
                 <p className="font-bold text-foreground">What happens next:</p>
                 <p>
                   1. Each scholar receives an official branded email via Resend Pro instructing them
-                  to prepare for on-ground arrival at Aba Story Center by October 15, 2027.
+                  to prepare for on-ground arrival at Aba Study Center by October 15, 2026.
                 </p>
                 <p>
                   2. A high-priority banner is pinned to their portal with an interactive RSVP

@@ -1618,7 +1618,7 @@ export const confirmResumptionAttendanceServerFn = createServerFn({ method: "POS
       physicalAttendanceAcknowledged: true,
       resumptionAttendanceConfirmed: true,
       resumptionAttendanceConfirmedAt: now,
-      resumptionTargetDate: "2027-10-15",
+      resumptionTargetDate: "2026-10-15",
     };
 
     const { error: updateErr } = await adminClient
@@ -1643,8 +1643,8 @@ export const confirmResumptionAttendanceServerFn = createServerFn({ method: "POS
       metadata: {
         application_id: app.id,
         confirmed_at: now,
-        location: "Story Center, Aba",
-        resumption_date: "2027-10-15",
+        location: "Study Center, Aba",
+        resumption_date: "2026-10-15",
       },
     });
 

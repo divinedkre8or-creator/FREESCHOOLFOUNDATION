@@ -121,7 +121,7 @@ function PortalPage() {
                   physicalAttendanceAcknowledged: true,
                   resumptionAttendanceConfirmed: true,
                   resumptionAttendanceConfirmedAt: res.confirmedAt,
-                  resumptionTargetDate: "2027-10-15",
+                  resumptionTargetDate: "2026-10-15",
                 },
               }
             : app,
@@ -129,7 +129,7 @@ function PortalPage() {
       }));
       setAttendanceFeedback({
         type: "success",
-        text: "Attendance confirmed! Your physical onboarding seat at Story Center, Aba has been secured for Thursday, October 15, 2027.",
+        text: "Attendance confirmed! Your physical onboarding seat at Study Center, Aba has been secured for Thursday, October 15, 2026.",
       });
       setShowRsvpModal(false);
     } catch (err) {
@@ -462,11 +462,11 @@ function PortalPage() {
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-bold text-muted-foreground">
                       <CalendarDays className="h-3.5 w-3.5 text-brand-green" />
-                      Deadline: Thursday, October 15, 2027
+                      Deadline: Thursday, October 15, 2026
                     </span>
                   </div>
                   <h2 className="text-xl font-extrabold text-foreground sm:text-2xl">
-                    Physical Resumption at Story Center, Aba
+                    Physical Resumption at Study Center, Aba
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
                     Congratulations on your scholarship award! Please review the essential operational requirements for your academic journey:
@@ -475,24 +475,34 @@ function PortalPage() {
               </div>
 
               {/* Requirements Callout Grid */}
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs">
+              <div className="mt-4 grid gap-3 sm:grid-cols-3 text-xs">
                 <div className="rounded-xl border border-border bg-secondary/30 p-3.5">
                   <div className="flex items-center gap-2 font-bold text-foreground">
                     <MapPin className="h-4 w-4 text-brand-orange shrink-0" />
-                    Physical On-Ground Presence
+                    Physical Presence
                   </div>
                   <p className="mt-1.5 text-muted-foreground leading-relaxed">
-                    This programme requires full physical presence for lectures and practical studio sessions. All admitted scholars must relocate and be on ground at our <strong className="text-foreground font-semibold">Story Center in Aba, Abia State</strong>.
+                    This programme requires full physical presence. All admitted scholars must relocate and be on ground at our <strong className="text-foreground font-semibold">Study Center in Aba, Abia State</strong>.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border bg-secondary/30 p-3.5">
+                  <div className="flex items-center gap-2 font-bold text-foreground">
+                    <FileCheck className="h-4 w-4 text-brand-orange shrink-0" />
+                    Mandatory Documents
+                  </div>
+                  <p className="mt-1.5 text-muted-foreground leading-relaxed">
+                    Bring for physical verification: <strong>JAMB Result, WAEC/NECO Result, LG of Origin Document</strong>, and <strong>Letter of Attestation</strong>.
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-border bg-secondary/30 p-3.5">
                   <div className="flex items-center gap-2 font-bold text-foreground">
                     <ShieldCheck className="h-4 w-4 text-brand-green shrink-0" />
-                    Church Ministry Partnership Ethos
+                    Church Ministry Ethos
                   </div>
                   <p className="mt-1.5 text-muted-foreground leading-relaxed">
-                    This scholarship is 100% funded and facilitated in partnership with our Christian church ministry. As a sponsored scholar, you are expected to actively participate in the fellowship, values, and community activities of the church organization powering the scholarship.
+                    This scholarship is 100% funded and facilitated in partnership with our Christian church ministry. Scholars participate in the fellowship and church activities powering the scholarship.
                   </p>
                 </div>
               </div>
@@ -508,7 +518,7 @@ function PortalPage() {
                           Physical Attendance Confirmed ✓
                         </p>
                         <p className="text-xs text-emerald-800/90 dark:text-emerald-300 mt-0.5">
-                          You have confirmed that you will be physically on ground in Aba for schooling by <strong>Thursday, October 15, 2027</strong>. Your seat and reception dossier are reserved.
+                          You have confirmed that you will be physically on ground in Aba for schooling by <strong>Thursday, October 15, 2026</strong>. Your seat and reception dossier are reserved.
                         </p>
                         {application.personal?.resumptionAttendanceConfirmedAt && (
                           <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 mt-1 font-mono">
@@ -890,9 +900,9 @@ function PortalPage() {
               ? announcements
               : [
                   {
-                    id: "announcement-resumption-2027",
+                    id: "announcement-resumption-2026",
                     title: "Official Resumption & Physical Onboarding Schedule",
-                    body: "Physical arrival and registration for approved scholars begins at our Story Center in Aba, Abia State, arriving by Thursday, October 15, 2027. Full physical presence for lectures and practical studio sessions is required. Sponsored scholars participate actively in church community fellowship powering the scholarship.",
+                    body: "Physical arrival and registration for approved scholars begins at our Study Center in Aba, Abia State, arriving by Thursday, October 15, 2026. Required verification documents: JAMB Result, WAEC/NECO Result, LG of Origin Document, and Letter of Attestation. Full physical presence for lectures and practical sessions is required.",
                     createdAt: "2026-10-04T00:00:00Z",
                     audience: "All Applicants & Scholars",
                   },
@@ -1028,7 +1038,7 @@ function PortalPage() {
                   <MapPin className="h-4 w-4 text-brand-orange shrink-0 mt-0.5" />
                   <div>
                     <strong className="font-bold">Physical Location:</strong>
-                    <p className="text-muted-foreground">Story Center, Aba, Abia State.</p>
+                    <p className="text-muted-foreground">Study Center, Aba, Abia State.</p>
                   </div>
                 </div>
 
@@ -1036,7 +1046,7 @@ function PortalPage() {
                   <CalendarDays className="h-4 w-4 text-brand-green shrink-0 mt-0.5" />
                   <div>
                     <strong className="font-bold">Resumption Arrival Deadline:</strong>
-                    <p className="text-muted-foreground">Thursday, October 15, 2027.</p>
+                    <p className="text-muted-foreground">Thursday, October 15, 2026.</p>
                   </div>
                 </div>
 
