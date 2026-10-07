@@ -68,6 +68,11 @@ function CommunicationsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [cohortProgress, setCohortProgress] = useState<{
+    current: number;
+    total: number;
+    emailsSent: number;
+  } | null>(null);
   const [showPendingRoster, setShowPendingRoster] = useState(false);
   const [showDeliveredRoster, setShowDeliveredRoster] = useState(false);
 
@@ -210,12 +215,14 @@ function CommunicationsPage() {
     if (pendingResumptionApps.length === 0) return;
     setDispatchingCohort(true);
     setCohortFeedback(null);
+    setCohortProgress({ current: 0, total: pendingResumptionApps.length, emailsSent: 0 });
     try {
       const ids = pendingResumptionApps.map((a) => a.id);
       const res = await dispatchResumptionEmailBatch({
         applicationIds: ids,
         customSubject: RESUMPTION_SUBJECT,
         customBody: RESUMPTION_BODY,
+        onProgress: (progress) => setCohortProgress(progress),
       });
 
       const now = new Date().toISOString();
@@ -251,6 +258,7 @@ function CommunicationsPage() {
       });
     } finally {
       setDispatchingCohort(false);
+      setCohortProgress(null);
     }
   };
 
@@ -581,6 +589,32 @@ function CommunicationsPage() {
             </div>
           </div>
 
+          {/* Live Dispatch Progress Bar */}
+          {cohortProgress && dispatchingCohort && (
+            <div className="rounded-xl border border-brand-green/40 bg-brand-green-soft/30 p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="flex items-center gap-2 text-brand-green-dark">
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  Dispatching emails… {cohortProgress.current.toLocaleString()} / {cohortProgress.total.toLocaleString()}
+                </span>
+                <span className="font-extrabold text-brand-green-dark">
+                  {Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%
+                </span>
+              </div>
+              <div className="h-2.5 w-full rounded-full bg-brand-green/15 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-brand-green transition-all duration-500 ease-out"
+                  style={{
+                    width: `${Math.max(2, (cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {cohortProgress.emailsSent.toLocaleString()} emails delivered via Resend Pro so far •
+                Batch {Math.ceil(cohortProgress.current / 400)} of {Math.ceil(cohortProgress.total / 400)}
+              </p>
+            </div>
+          )}
           {/* Collapsible Sent Resumption Mail Roster */}
           {showDeliveredRoster && (
             <div className="mt-4 rounded-xl border border-brand-green/30 overflow-hidden bg-background shadow-xs">
@@ -736,6 +770,26 @@ function CommunicationsPage() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* In-dialog progress bar during dispatch */}
+          {cohortProgress && dispatchingCohort && (
+            <div className="mx-1 rounded-lg border border-brand-green/30 bg-brand-green-soft/20 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-brand-green-dark">
+                <span className="flex items-center gap-1.5">
+                  <LoaderCircle className="h-3 w-3 animate-spin" />
+                  {cohortProgress.current.toLocaleString()} / {cohortProgress.total.toLocaleString()} scholars
+                </span>
+                <span>{Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-brand-green/15 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-brand-green transition-all duration-500 ease-out"
+                  style={{ width: `${Math.max(2, (cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={dispatchingCohort}>Cancel</AlertDialogCancel>
             <AlertDialogAction
@@ -746,7 +800,11 @@ function CommunicationsPage() {
               }}
               className="bg-brand-green font-bold text-white hover:bg-brand-green-dark"
             >
-              {dispatchingCohort ? "Dispatching…" : "Confirm & Cancel Block"}
+              {dispatchingCohort
+                ? cohortProgress
+                  ? `Sending… ${Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%`
+                  : "Dispatching…"
+                : "Confirm & Cancel Block"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

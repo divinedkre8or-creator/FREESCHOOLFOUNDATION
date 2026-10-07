@@ -1833,6 +1833,11 @@ export const dispatchResumptionEmailBatchServerFn = createServerFn({ method: "PO
         } catch (fetchErr) {
           console.error("[dispatchResumptionEmail] Resend fetch exception:", fetchErr);
         }
+
+        // Rate-limit delay between Resend API chunks (avoids 429s)
+        if (i + 100 < emailPayloads.length) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
       }
     }
 

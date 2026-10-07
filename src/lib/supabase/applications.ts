@@ -937,9 +937,55 @@ export async function dispatchResumptionEmailBatch(input: {
   applicationIds: string[];
   customSubject?: string;
   customBody?: string;
+  onProgress?: (progress: { current: number; total: number; emailsSent: number }) => void;
 }): Promise<{ success: boolean; count: number; emailDeliveredCount: number; batchId: string }> {
   const { dispatchResumptionEmailBatch: dispatchFn } = await import("@/lib/admin/admin-actions");
-  return await dispatchFn(input);
+
+  const CHUNK_SIZE = 400; // Well within the server schema's .max(500)
+  const total = input.applicationIds.length;
+
+  // If within a single chunk, send directly (no delay needed)
+  if (total <= CHUNK_SIZE) {
+    const res = await dispatchFn({
+      applicationIds: input.applicationIds,
+      customSubject: input.customSubject,
+      customBody: input.customBody,
+    });
+    input.onProgress?.({ current: total, total, emailsSent: res.emailDeliveredCount });
+    return res;
+  }
+
+  // Auto-chunk for large batches (5,000+)
+  let totalDispatched = 0;
+  let totalEmailsSent = 0;
+  let lastBatchId = "";
+
+  for (let i = 0; i < total; i += CHUNK_SIZE) {
+    const chunk = input.applicationIds.slice(i, i + CHUNK_SIZE);
+    const res = await dispatchFn({
+      applicationIds: chunk,
+      customSubject: input.customSubject,
+      customBody: input.customBody,
+    });
+
+    totalDispatched += res.count;
+    totalEmailsSent += res.emailDeliveredCount;
+    lastBatchId = res.batchId;
+
+    input.onProgress?.({ current: Math.min(i + CHUNK_SIZE, total), total, emailsSent: totalEmailsSent });
+
+    // Rate-limit delay between chunks — 1.5s avoids Resend 429s
+    if (i + CHUNK_SIZE < total) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+
+  return {
+    success: true,
+    count: totalDispatched,
+    emailDeliveredCount: totalEmailsSent,
+    batchId: lastBatchId,
+  };
 }
 
 
