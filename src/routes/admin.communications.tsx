@@ -64,6 +64,8 @@ function CommunicationsPage() {
   // Cohort block dispatch states
   const [dispatchingCohort, setDispatchingCohort] = useState(false);
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
+  const [resendModalOpen, setResendModalOpen] = useState(false);
+  const [resendingSentCohort, setResendingSentCohort] = useState(false);
   const [cohortFeedback, setCohortFeedback] = useState<{
     type: "success" | "error";
     text: string;
@@ -258,6 +260,58 @@ function CommunicationsPage() {
       });
     } finally {
       setDispatchingCohort(false);
+      setCohortProgress(null);
+    }
+  };
+
+  // Resend updated notice to already delivered cohort
+  const handleResendSentCohort = async () => {
+    if (deliveredResumptionApps.length === 0) return;
+    setResendingSentCohort(true);
+    setCohortFeedback(null);
+    setCohortProgress({ current: 0, total: deliveredResumptionApps.length, emailsSent: 0 });
+    try {
+      const ids = deliveredResumptionApps.map((a) => a.id);
+      const res = await dispatchResumptionEmailBatch({
+        applicationIds: ids,
+        customSubject: RESUMPTION_SUBJECT,
+        customBody: RESUMPTION_BODY,
+        onProgress: (progress) => setCohortProgress(progress),
+      });
+
+      const now = new Date().toISOString();
+      const updated = liveApplications.map((app) =>
+        ids.includes(app.id)
+          ? {
+              ...app,
+              personal: {
+                ...app.personal,
+                resumptionEmailSent: true,
+                resumptionEmailSentAt: now,
+                resumptionEmailBatchId: res.batchId,
+              },
+            }
+          : app,
+      );
+
+      setLiveApplications(updated);
+      setState((prev) => ({ ...prev, applications: updated }));
+
+      setCohortFeedback({
+        type: "success",
+        text: `Updated, beautifully formatted resumption notices successfully re-dispatched to all ${res.count} scholars (${res.emailDeliveredCount} delivered via Resend Pro).`,
+      });
+      setResendModalOpen(false);
+    } catch (resendErr) {
+      setCohortFeedback({
+        type: "error",
+        text:
+          resendErr instanceof Error
+            ? resendErr.message
+            : "Failed to resend resumption notices to the sent cohort.",
+      });
+    } finally {
+      setResendingSentCohort(false);
       setCohortProgress(null);
     }
   };
@@ -546,6 +600,28 @@ function CommunicationsPage() {
                 )}
               </Button>
 
+              {deliveredResumptionApps.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setResendModalOpen(true)}
+                  disabled={dispatchingCohort || resendingSentCohort}
+                  className="border-amber-600/40 bg-amber-500/10 text-amber-900 hover:bg-amber-500/20 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 gap-1.5 text-xs font-bold"
+                >
+                  {resendingSentCohort ? (
+                    <>
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin text-amber-700 dark:text-amber-400" />
+                      Resending…
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
+                      Resend Formatted Notice to Sent Batch ({deliveredResumptionApps.length})
+                    </>
+                  )}
+                </Button>
+              )}
+
               {pendingResumptionApps.length > 0 && (
                 <Button
                   variant="outline"
@@ -567,7 +643,7 @@ function CommunicationsPage() {
 
               <Button
                 size="default"
-                disabled={pendingResumptionApps.length === 0 || dispatchingCohort}
+                disabled={pendingResumptionApps.length === 0 || dispatchingCohort || resendingSentCohort}
                 onClick={() => setCohortModalOpen(true)}
                 className={`font-bold transition-all shadow-sm ${
                   pendingResumptionApps.length > 0
@@ -590,12 +666,12 @@ function CommunicationsPage() {
           </div>
 
           {/* Live Dispatch Progress Bar */}
-          {cohortProgress && dispatchingCohort && (
+          {cohortProgress && (dispatchingCohort || resendingSentCohort) && (
             <div className="rounded-xl border border-brand-green/40 bg-brand-green-soft/30 p-4 space-y-2.5">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="flex items-center gap-2 text-brand-green-dark">
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  Dispatching emails… {cohortProgress.current.toLocaleString()} / {cohortProgress.total.toLocaleString()}
+                  {resendingSentCohort ? "Re-dispatching updated notices…" : "Dispatching emails…"} {cohortProgress.current.toLocaleString()} / {cohortProgress.total.toLocaleString()}
                 </span>
                 <span className="font-extrabold text-brand-green-dark">
                   {Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%
@@ -625,9 +701,23 @@ function CommunicationsPage() {
                     Sent Resumption Mail Cohort ({deliveredResumptionApps.length} Scholars Notified)
                   </span>
                 </div>
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  Official Resend Pro notices delivered • Target arrival: Oct 15, 2026
-                </span>
+                <div className="flex items-center gap-2">
+                  {deliveredResumptionApps.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResendModalOpen(true)}
+                      disabled={dispatchingCohort || resendingSentCohort}
+                      className="border-amber-600/40 bg-amber-500/10 text-amber-900 hover:bg-amber-500/20 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 text-[11px] font-bold h-7 gap-1"
+                    >
+                      <RefreshCw className="h-3 w-3 text-amber-700 dark:text-amber-400" />
+                      Resend Formatted Notice
+                    </Button>
+                  )}
+                  <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">
+                    Target arrival: Oct 15, 2026
+                  </span>
+                </div>
               </div>
 
               {deliveredResumptionApps.length === 0 ? (
@@ -805,6 +895,80 @@ function CommunicationsPage() {
                   ? `Sending… ${Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%`
                   : "Dispatching…"
                 : "Confirm & Cancel Block"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for Resending to Sent Cohort */}
+      <AlertDialog open={resendModalOpen} onOpenChange={setResendModalOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-extrabold text-amber-900 dark:text-amber-300">
+              <RefreshCw className="h-5 w-5 text-amber-600" />
+              Resend Formatted Notice to Sent Batch
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2 text-left">
+              <p className="text-sm text-foreground">
+                You are about to re-dispatch the official resumption notice with{" "}
+                <strong className="text-brand-green font-bold">
+                  proper typography, clear headers, and bulleted document lists
+                </strong>{" "}
+                to all{" "}
+                <strong className="text-amber-700 dark:text-amber-400 font-bold">
+                  {deliveredResumptionApps.length} scholars
+                </strong>{" "}
+                who were sent the initial notice earlier.
+              </p>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-muted-foreground space-y-1.5">
+                <p className="font-bold text-foreground">What this will do:</p>
+                <p>
+                  • Dispatches the corrected, beautifully formatted email directly to their inbox via Resend Pro.
+                </p>
+                <p>
+                  • Updates their portal notification with the cleaned-up official announcement text.
+                </p>
+                <p>
+                  • Preserves any attendance confirmations (RSVP) already submitted by scholars.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {/* In-dialog progress bar during resend */}
+          {cohortProgress && resendingSentCohort && (
+            <div className="mx-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-300">
+                <span className="flex items-center gap-1.5">
+                  <LoaderCircle className="h-3 w-3 animate-spin" />
+                  {cohortProgress.current.toLocaleString()} / {cohortProgress.total.toLocaleString()} scholars
+                </span>
+                <span>{Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-amber-500/20 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-amber-600 transition-all duration-500 ease-out"
+                  style={{ width: `${Math.max(2, (cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resendingSentCohort}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resendingSentCohort}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleResendSentCohort();
+              }}
+              className="bg-amber-600 font-bold text-white hover:bg-amber-700"
+            >
+              {resendingSentCohort
+                ? cohortProgress
+                  ? `Sending… ${Math.round((cohortProgress.current / Math.max(1, cohortProgress.total)) * 100)}%`
+                  : "Resending…"
+                : "Confirm & Resend Batch"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
