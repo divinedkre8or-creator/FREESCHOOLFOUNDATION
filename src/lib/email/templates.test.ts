@@ -74,4 +74,46 @@ describe("buildPlatformEmail", () => {
     expect(email.html).toContain("Please attend the virtual briefing on Thursday.");
     expect(email.text).toContain("Please attend the virtual briefing on Thursday.");
   });
+
+  it("renders structured announcement emails with headings, lists, and callouts", () => {
+    const body = `Following the approval of your application, welcome to the academic session.
+
+1. Physical On-Ground Resumption (Study Center, Aba)
+This programme requires full physical presence.
+
+3. Mandatory Documents
+Required documents:
+- JAMB Result
+- WAEC/NECO Result
+- LG of Origin Document
+
+5. MANDATORY ACTION — Confirm Your Attendance
+You must confirm your attendance.
+
+Portal Login Link: https://thefreeschoolfoundation.com.ng/portal
+
+Warm regards,
+The Admissions Directorate`;
+
+    const email = buildPlatformEmail({
+      event: "message",
+      firstName: "Emmanuel",
+      subject: "Official Resumption Notice",
+      body,
+      portalUrl: "https://thefreeschoolfoundation.com.ng/portal",
+    });
+
+    // Check headings and sections
+    expect(email.html).toContain("1. Physical On-Ground Resumption (Study Center, Aba)");
+    // Check styled list
+    expect(email.html).toContain("<ul");
+    expect(email.html).toContain(">JAMB Result</li>");
+    expect(email.html).toContain(">WAEC/NECO Result</li>");
+    // Check mandatory callout
+    expect(email.html).toContain("5. MANDATORY ACTION — Confirm Your Attendance");
+    // Check link conversion
+    expect(email.html).toContain('href="https://thefreeschoolfoundation.com.ng/portal"');
+    // Check signature block
+    expect(email.html).toContain("The Admissions Directorate");
+  });
 });
